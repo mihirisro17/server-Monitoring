@@ -6,8 +6,6 @@ A real-time server monitoring and SSH user tracking dashboard built with **Flask
 
 ## 📸 Screenshots
 
-> Place your screenshots in a `screenshots/` folder and update the paths below.
-
 ### Dashboard Overview
 
 ![Dashboard](screenshots/server1.png)
