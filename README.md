@@ -1,95 +1,137 @@
 <div align="center">
-  <h1>🖥️ Server Monitoring Dashboard</h1>
-  <p>
-    A real-time server monitoring and SSH user tracking dashboard built with <strong>Flask</strong> (Python) and <strong>Vanilla JavaScript</strong>. Designed for monitoring multiple Linux servers over SSH with live metrics, alerting, user session tracking, and storage analysis.
-  </p>
+
+<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=700&size=28&duration=3000&pause=1000&color=6366F1&center=true&vCenter=true&width=700&lines=🖥️+Server+Monitoring+Dashboard;Real-Time+SSH+%26+Server+Tracking;Built+with+Flask+%2B+JavaScript" alt="Typing SVG" />
+
+<br/>
+
+<p>
+  A <strong>real-time server monitoring</strong> and <strong>SSH user tracking</strong> dashboard built with
+  <strong>Flask</strong> (Python) and <strong>Vanilla JavaScript</strong>. Designed for monitoring multiple Linux
+  servers over SSH with live metrics, alerting, user session tracking, and storage analysis.
+</p>
+
+<br/>
+
+<a href="#"><img src="https://img.shields.io/badge/Python-3.8+-3776AB?style=for-the-badge&logo=python&logoColor=white"/></a>
+<a href="#"><img src="https://img.shields.io/badge/Flask-2.3+-000000?style=for-the-badge&logo=flask&logoColor=white"/></a>
+<a href="#"><img src="https://img.shields.io/badge/JavaScript-ES6+-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black"/></a>
+<a href="#"><img src="https://img.shields.io/badge/WebSocket-Enabled-10B981?style=for-the-badge&logo=socket.io&logoColor=white"/></a>
+<a href="#"><img src="https://img.shields.io/badge/SSH-Monitoring-EF4444?style=for-the-badge&logo=gnubash&logoColor=white"/></a>
+<a href="#"><img src="https://img.shields.io/badge/License-MIT-8B5CF6?style=for-the-badge"/></a>
+
+<br/><br/>
+
+<a href="#-screenshots">Screenshots</a> •
+<a href="#-features">Features</a> •
+<a href="#-installation">Installation</a> •
+<a href="#-api-endpoints">API Docs</a> •
+<a href="#-ssh-user-tracking--how-it-works">How It Works</a>
+
 </div>
 
-<hr>
+---
 
-<h2>📸 Screenshots</h2>
+## 📸 Screenshots
 
-<h3>Dashboard Overview</h3>
-<img src="screenshots/server1.png" alt="Dashboard Overview" width="100%">
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="screenshots/server1.png" alt="Dashboard Overview" width="100%"/>
+      <br/><sub><b>🏠 Dashboard Overview</b></sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="screenshots/s2.png" alt="Server Details" width="100%"/>
+      <br/><sub><b>🖥️ Server Details Panel</b></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="screenshots/user.png" alt="User Tracking" width="100%"/>
+      <br/><sub><b>👥 SSH User Tracking</b></sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="screenshots/alerts.png" alt="Alerts Panel" width="100%"/>
+      <br/><sub><b>🚨 Alerts Dashboard</b></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" colspan="2">
+      <img src="screenshots/analytics.png" alt="Analytics Charts" width="100%"/>
+      <br/><sub><b>📈 Analytics & Historical Charts</b></sub>
+    </td>
+  </tr>
+</table>
 
-<h3>Server Details</h3>
-<img src="screenshots/s2.png" alt="Server Details" width="100%">
+---
 
-<h3>User Tracking</h3>
-<img src="screenshots/user.png" alt="User Tracking Dashboard" width="100%">
+## ✨ Features
 
-<h3>Alerts</h3>
-<img src="screenshots/alerts.png" alt="Alerts Panel" width="100%">
+<table>
+  <tr>
+    <td valign="top" width="50%">
 
-<h3>Analytics</h3>
-<img src="screenshots/analytics.png" alt="Analytics Charts" width="100%">
+### 📊 Real-Time Monitoring
 
-<hr>
+- Live **CPU**, **Memory**, and **Storage** usage per server
+- Auto-refresh every 5 seconds (configurable)
+- Color-coded status badges (`online`, `offline`, `error`)
+- Warning/Critical threshold alerts with blinking indicators
 
-<h2>✨ Features</h2>
+### 👥 SSH User Tracking
 
-<h3>📊 Real-Time Monitoring</h3>
-<ul>
-  <li>Live <strong>CPU</strong>, <strong>Memory</strong>, and <strong>Storage</strong> usage per server</li>
-  <li>Auto-refresh every 5 seconds (configurable)</li>
-  <li>Color-coded status badges (<code>online</code>, <code>offline</code>, <code>error</code>)</li>
-  <li>Warning/Critical threshold alerts with blinking indicators</li>
-</ul>
+- Tracks **who is connected** to which server
+- Captures **actual login times** from the `who` command
+- Calculates **total time spent** per user per server
+- IP-to-Name mapping for friendly display names
+- Filters out server-to-server SSH and console sessions
+- Background thread collects sessions every 30 seconds
 
-<h3>👥 SSH User Tracking</h3>
-<ul>
-  <li>Tracks <strong>who is connected</strong> to which server</li>
-  <li>Captures <strong>actual login times</strong> from the <code>who</code> command (not polling time)</li>
-  <li>Calculates <strong>total time spent</strong> per user per server</li>
-  <li>IP-to-Name mapping for friendly display names</li>
-  <li>Filters out server-to-server SSH and console/display sessions (<code>:0</code>, <code>:1</code>)</li>
-  <li>Background thread collects sessions every 30 seconds</li>
-</ul>
+### 🚨 Alert System
 
-<h3>🚨 Alert System</h3>
-<ul>
-  <li>Real-time alerts for CPU, Memory, Storage, and Offline servers</li>
-  <li><strong>Warning</strong> and <strong>Critical</strong> severity levels</li>
-  <li>WebSocket-based push notifications</li>
-  <li>Alert trends and history</li>
-</ul>
+- Real-time alerts for CPU, Memory, Storage & Offline
+- **Warning** and **Critical** severity levels
+- WebSocket-based push notifications
+- Alert trends and history
 
-<h3>📈 Analytics</h3>
-<ul>
-  <li>Historical CPU and Memory charts (Highcharts)</li>
-  <li>Per-server comparison charts</li>
-  <li>Server health scores</li>
-  <li>24-hour detailed history (288 data points)</li>
-</ul>
+  </td>
+  <td valign="top" width="50%">
 
-<h3>🗂️ Storage Analysis</h3>
-<ul>
-  <li>Detailed per-partition storage breakdown</li>
-  <li>Deep storage analysis — top 20 largest files and directories</li>
-  <li>File type distribution</li>
-  <li>Directory summary (Level 1)</li>
-</ul>
+### 📈 Analytics
 
-<h3>🔧 Server Management</h3>
-<ul>
-  <li>View <strong>running services</strong> and <strong>failed services</strong></li>
-  <li>View <strong>top CPU and Memory processes</strong></li>
-  <li><strong>Kick SSH users</strong> (terminate their session)</li>
-  <li>View <strong>journalctl logs</strong> directly from the dashboard</li>
-  <li>Network interface stats, uptime, and load average</li>
-</ul>
+- Historical CPU and Memory charts (Highcharts)
+- Per-server comparison charts
+- Server health scores
+- 24-hour detailed history (288 data points)
 
-<h3>🎨 UI/UX</h3>
-<ul>
-  <li>Multiple <strong>themes</strong> (Dark, Light, etc.)</li>
-  <li>Compact view toggle</li>
-  <li>Responsive sidebar navigation</li>
-  <li>Smooth animations and transitions</li>
-</ul>
+### 🗂️ Storage Analysis
 
-<hr>
+- Detailed per-partition storage breakdown
+- Top 20 largest files and directories
+- File type distribution
+- Directory summary (Level 1)
 
-<h2>🏗️ Project Structure</h2>
+### 🔧 Server Management
+
+- View **running** and **failed services**
+- View **top CPU and Memory processes**
+- **Kick SSH users** (terminate their session)
+- View **journalctl logs** from the dashboard
+- Network interface stats, uptime, load average
+
+### 🎨 UI/UX
+
+- Multiple **themes** (Dark, Light, etc.)
+- Compact view toggle + responsive sidebar
+- Smooth animations and transitions
+
+  </td>
+  </tr>
+</table>
+
+---
+
+## 🏗️ Project Structure
+
 <p>Below is the core directory structure for the server monitoring application:</p>
 
 <pre><code>server_monitoring/
@@ -117,113 +159,150 @@
 
 <hr>
 
-<h2>⚙️ Configuration</h2>
-<p>Edit <code>config.py</code> to add your servers:</p>
+---
 
-<pre><code>class Config:
+## ⚙️ Configuration
+
+<details>
+<summary><b>🖥️ Click to expand — Server Configuration (config.py)</b></summary>
+<br/>
+
+```python
+class Config:
     SERVER_GROUPS = {
         "gpu": [
             {
-                "name": "23 - H100 - V1G1",
-                "ip": "192.168.1.23",
+                "name": "231 - H100 - V1G1",
+                "ip": "192.168.1.231",
                 "username": "your_user",
                 "password": "your_password",
                 "group": "gpus"
             },
-            # Add more servers...
+        ],
+        "cpu": [
+            {
+                "name": "2.136 - V1C2",
+                "ip": "192.168.2.136",
+                "username": "your_user",
+                "password": "your_password",
+                "group": "data"
+            },
         ]
     }
+    SERVERS = [s for group in SERVER_GROUPS.values() for s in group]
+```
 
-    # Flatten all servers into a single list
-    SERVERS = [s for group in SERVER_GROUPS.values() for s in group]</code></pre>
+</details>
 
-<p>Edit <strong>IP to Name mapping</strong> in <code>monitor.js</code>:</p>
+<details>
+<summary><b>👤 Click to expand — IP to Name Mapping (monitor.js)</b></summary>
+<br/>
 
-<pre><code>const IP_NAME_MAP = {
-  "192.168.1.22": "user1",
-  "192.168.1.14": "user2",
-  "192.168.1.22": "user3",
-  "192.168.1.20": "user4",
-  "192.168.1.21": "user5",
-  // Add more...
-};</code></pre>
+```javascript
+const IP_NAME_MAP = {
+  "192.168.1.220": "Harish",
+  "192.168.1.141": "Vikrant",
+  "192.168.1.221": "Karnav",
+  "192.168.1.205": "Vidit",
+  "192.168.1.210": "Arpan",
+};
+```
 
-<hr>
+</details>
 
-<h2>🚀 Installation</h2>
+---
 
-<h3>1. Clone the Repository</h3>
-<pre><code>git clone https://github.com/yourusername/server-monitoring.git
-cd server-monitoring</code></pre>
+## 🚀 Installation
 
-<h3>2. Create Virtual Environment</h3>
-<pre><code>python3 -m venv flask_env
-source flask_env/bin/activate   # Linux/Mac
-flask_env\Scripts\activate      # Windows</code></pre>
+> **Prerequisites:** Python 3.8+, `pip`, and `sshpass` on your system.
 
-<h3>3. Install Dependencies</h3>
-<pre><code>pip install -r requirements.txt</code></pre>
+```bash
+# 1. Clone the repository
+git clone https://github.com/yourusername/server-monitoring.git
+cd server-monitoring
 
-<h3>4. Install <code>sshpass</code> (required for SSH commands)</h3>
-<pre><code>sudo apt install sshpass       # Ubuntu/Debian
-sudo yum install sshpass       # RHEL/CentOS</code></pre>
+# 2. Create and activate virtual environment
+python3 -m venv flask_env
+source flask_env/bin/activate        # Linux/Mac
+# flask_env\Scripts\activate         # Windows
 
-<h3>5. Configure Servers</h3>
-<p>Edit <code>config.py</code> with your server details (IPs, credentials, groups).</p>
+# 3. Install Python dependencies
+pip install -r requirements.txt
 
-<h3>6. Run the Application</h3>
-<pre><code>python run.py</code></pre>
-<p>Open your browser at: <code>http://127.0.0.1:5011/monitoring_server/home</code></p>
+# 4. Install sshpass
+sudo apt install sshpass             # Ubuntu/Debian
+# sudo yum install sshpass           # RHEL/CentOS
 
-<hr>
+# 5. Configure your servers
+nano config.py
 
-<h2>📦 Requirements</h2>
+# 6. Run
+python run.py
+```
 
-<pre><code>flask>=2.3.0
+<div align="center">
+
+🌐 **Open:** `http://127.0.0.1:5011/monitoring_server/home`
+
+</div>
+
+---
+
+## 📦 Requirements
+
+```txt
+flask>=2.3.0
 flask-socketio>=5.3.0
 paramiko>=3.0.0
-eventlet>=0.33.0</code></pre>
-<p><em>Note: System package <code>sshpass</code> is also required.</em></p>
+eventlet>=0.33.0
+```
 
-<hr>
+> 💡 System package `sshpass` is also required — install via `apt` / `yum`.
 
-<h2>🔌 API Endpoints</h2>
+---
 
-<table width="100%">
-  <thead>
-    <tr>
-      <th align="left">Method</th>
-      <th align="left">Endpoint</th>
-      <th align="left">Description</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr><td><code>GET</code></td><td><code>/api/status</code></td><td>All server statuses (cached)</td></tr>
-    <tr><td><code>POST</code></td><td><code>/api/live_metrics</code></td><td>Live metrics for selected servers</td></tr>
-    <tr><td><code>GET</code></td><td><code>/api/alerts</code></td><td>Current alerts</td></tr>
-    <tr><td><code>GET</code></td><td><code>/api/user_tracking</code></td><td>SSH user tracking data</td></tr>
-    <tr><td><code>GET</code></td><td><code>/api/debug/tracking</code></td><td>Raw tracking JSON (debug)</td></tr>
-    <tr><td><code>POST</code></td><td><code>/api/server_logs</code></td><td>Fetch journalctl logs</td></tr>
-    <tr><td><code>POST</code></td><td><code>/api/kick_ssh</code></td><td>Terminate SSH user session</td></tr>
-    <tr><td><code>POST</code></td><td><code>/api/user_services</code></td><td>Active processes per user</td></tr>
-    <tr><td><code>POST</code></td><td><code>/api/analyze_storage</code></td><td>Deep storage analysis</td></tr>
-    <tr><td><code>GET</code></td><td><code>/api/server_health_score</code></td><td>Server health scores</td></tr>
-    <tr><td><code>GET</code></td><td><code>/api/alert_trends</code></td><td>Alert trend history</td></tr>
-    <tr><td><code>GET</code></td><td><code>/api/server_comparison</code></td><td>Cross-server metric comparison</td></tr>
-    <tr><td><code>GET</code></td><td><code>/api/test/who/&lt;server&gt;</code></td><td>Debug <code>who</code> command output</td></tr>
-  </tbody>
-</table>
+## 🔌 API Endpoints
 
-<hr>
+<details>
+<summary><b>📋 Click to expand — Full API Reference</b></summary>
+<br/>
 
-<h2>🔄 Background Thread</h2>
-<p>The app starts a background thread on launch that:</p>
-<ol>
-  <li>SSHs into each server every <strong>30 seconds</strong></li>
-  <li>Runs the <code>who</code> command to get active sessions with <strong>actual login times</strong></li>
-  <li>Updates <code>user_tracking.json</code> with session data</li>
-  <li>Marks sessions as ended if no longer in <code>who</code> output</li>
-</ol>
+| Method | Endpoint                   | Description                       |
+| :----: | -------------------------- | --------------------------------- |
+| `GET`  | `/api/status`              | All server statuses (cached)      |
+| `POST` | `/api/live_metrics`        | Live metrics for selected servers |
+| `GET`  | `/api/alerts`              | Current alerts                    |
+| `GET`  | `/api/user_tracking`       | SSH user tracking data            |
+| `GET`  | `/api/debug/tracking`      | Raw tracking JSON (debug)         |
+| `POST` | `/api/server_logs`         | Fetch journalctl logs             |
+| `POST` | `/api/kick_ssh`            | Terminate SSH user session        |
+| `POST` | `/api/user_services`       | Active processes per user         |
+| `POST` | `/api/analyze_storage`     | Deep storage analysis             |
+| `GET`  | `/api/server_health_score` | Server health scores              |
+| `GET`  | `/api/alert_trends`        | Alert trend history               |
+| `GET`  | `/api/server_comparison`   | Cross-server metric comparison    |
+| `GET`  | `/api/test/who/<server>`   | Debug `who` command output        |
+
+</details>
+
+---
+
+## 🔄 Background Thread
+
+```python
+# run.py
+tracking_thread = threading.Thread(target=collect_server_data, daemon=True)
+tracking_thread.start()
+```
+
+| Step | Action                                                   |
+| :--: | -------------------------------------------------------- |
+|  ①   | SSHs into each server every **30 seconds**               |
+|  ②   | Runs `who` to get sessions with **actual login times**   |
+|  ③   | Updates `user_tracking.json` with parsed session data    |
+|  ④   | Marks sessions as **ended** if no longer in `who` output |
+
+---
 
 <pre><code># run.py
 tracking_thread = threading.Thread(target=collect_server_data, daemon=True)
@@ -256,78 +335,85 @@ sac       pts/1     2026-02-10 11:08  (192.168.3.208)
 │         └─ Terminal
 └─ Username</code></pre>
 
-<p>Each active session is stored and updated in JSON format:</p>
-
-<pre><code>{
-  "login_time":  "2026-02-10T11:08:00",
-  "first_seen":  "2026-02-10T11:08:00",
-  "last_seen":   "2026-02-10T17:30:00",
-  "terminal":    "pts/1",
-  "logout_time": null
-}</code></pre>
-
-<p><strong>Filtered out:</strong></p>
-<ul>
-  <li>Server-to-server SSH (e.g., <code>192.168.1.13</code> connecting to another server)</li>
-  <li>Local display sessions (<code>:0</code>, <code>:1</code>, <code>:pts/9:S.0</code>)</li>
-</ul>
-
-<hr>
-
-<h2>📊 Thresholds (Configurable in <code>routes.py</code>)</h2>
-
-<table width="50%">
-  <thead>
-    <tr>
-      <th align="left">Metric</th>
-      <th align="left">Warning</th>
-      <th align="left">Critical</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr><td><strong>CPU</strong></td><td>75%</td><td>90%</td></tr>
-    <tr><td><strong>Memory</strong></td><td>75%</td><td>90%</td></tr>
-    <tr><td><strong>Storage (root)</strong></td><td>80%</td><td>90%</td></tr>
-  </tbody>
-</table>
-
-<hr>
-
-<h2>🤝 Contributing</h2>
-<ol>
-  <li>Fork the repository</li>
-  <li>Create your feature branch: <code>git checkout -b feature/my-feature</code></li>
-  <li>Commit your changes: <code>git commit -m 'Add my feature'</code></li>
-  <li>Push to the branch: <code>git push origin feature/my-feature</code></li>
-  <li>Open a Pull Request</li>
-</ol>
-
-<hr>
-
-<h2>📄 License</h2>
-<p>This project is licensed under the MIT License - see the <a href="LICENSE">LICENSE</a> file for details.</p>
-
-<hr>
-
-<div align="center">
-  <h2>👨‍💻 Brought to you by</h2>
-  <p>
-    <b>Mihir Bulsara</b><br>
-    <i>Vedas Team</i>
-  </p>
-  <p>
-    🏢 <b>Organization:</b> SAC (Space Applications Centre)<br>
-    🎯 <b>Project Scope:</b> Internal GPU & compute server monitoring
-  </p>
 </div>
 
-<hr>
+Each session stored in `user_tracking.json`:
 
-<h2>⭐ Acknowledgements</h2>
-<ul>
-  <li><a href="https://flask.palletsprojects.com/">Flask</a></li>
-  <li><a href="https://www.highcharts.com/">Highcharts</a></li>
-  <li><a href="https://www.chartjs.org/">Chart.js</a></li>
-  <li><a href="https://www.paramiko.org/">Paramiko</a></li>
-  <li><a href="https://fontawesome.com/">Font Awesome</a></li>
-</ul>
+```json
+{
+  "login_time": "2026-02-10T11:08:00",
+  "first_seen": "2026-02-10T11:08:00",
+  "last_seen": "2026-02-10T17:30:00",
+  "terminal": "pts/1",
+  "logout_time": null
+}
+```
+
+> ⏱️ **Duration** = `last_seen − first_seen`
+
+### 🚫 Filtered Out Automatically
+
+| Type                     | Example                        | Reason                    |
+| ------------------------ | ------------------------------ | ------------------------- |
+| Server-to-server SSH     | `192.168.2.137` → another node | Not an end user           |
+| Local display sessions   | `:0`, `:1`                     | Physical console, not SSH |
+| Tmux/Screen sub-sessions | `:pts/9:S.0`                   | Internal multiplexer      |
+
+---
+
+## 📊 Alert Thresholds
+
+<div align="center">
+
+|       Metric       | 🟡 Warning | 🔴 Critical |
+| :----------------: | :--------: | :---------: |
+|      **CPU**       |    75%     |     90%     |
+|     **Memory**     |    75%     |     90%     |
+| **Storage (root)** |    80%     |     90%     |
+
+</div>
+
+---
+
+## 🤝 Contributing
+
+```bash
+git checkout -b feature/my-feature
+git commit -m "✨ Add my feature"
+git push origin feature/my-feature
+# Then open a Pull Request on GitHub
+```
+
+---
+
+## 📄 License
+
+MIT License — see [LICENSE](LICENSE) for details.
+
+---
+
+<div align="center">
+
+<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=18&duration=2000&pause=500&color=6366F1&center=true&vCenter=true&width=400&lines=Mihir+Bulsara;SAC+Monitoring+Team;Space+Applications+Centre" alt="Author"/>
+
+<br/>
+
+🏢 **Organization:** SAC — Space Applications Centre
+🎯 **Project:** Internal GPU & compute server monitoring
+
+<br/>
+
+[![Flask](https://img.shields.io/badge/Flask-000000?style=flat-square&logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
+[![Highcharts](https://img.shields.io/badge/Highcharts-1496BB?style=flat-square)](https://www.highcharts.com/)
+[![Chart.js](https://img.shields.io/badge/Chart.js-FF6384?style=flat-square&logo=chartdotjs&logoColor=white)](https://www.chartjs.org/)
+[![Paramiko](https://img.shields.io/badge/Paramiko-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.paramiko.org/)
+[![Font Awesome](https://img.shields.io/badge/Font_Awesome-528DD7?style=flat-square&logo=fontawesome&logoColor=white)](https://fontawesome.com/)
+[![Socket.io](https://img.shields.io/badge/Socket.io-010101?style=flat-square&logo=socket.io&logoColor=white)](https://socket.io/)
+
+<br/>
+
+---
+
+<sub>⭐ Star this repo if you found it useful!</sub>
+
+</div>
