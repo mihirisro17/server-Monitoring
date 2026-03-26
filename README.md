@@ -111,6 +111,7 @@ server_monitoring/
 ├── run.py               ← App entry point
 ├── user_tracking.json   ← Auto-generated SSH session store
 └── requirements.txt
+````
 
 ## ⚙️ Configuration
 
