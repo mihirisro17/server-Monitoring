@@ -88,7 +88,7 @@ A real-time server monitoring and SSH user tracking dashboard built with **Flask
 
 Below is the core directory structure for the server monitoring application:
 
-````text
+```text
 server_monitoring/
 │
 ├── app/
@@ -111,7 +111,7 @@ server_monitoring/
 ├── run.py               ← App entry point
 ├── user_tracking.json   ← Auto-generated SSH session store
 └── requirements.txt
-````
+```
 
 ## ⚙️ Configuration
 
@@ -134,7 +134,7 @@ class Config:
 
     # Flatten all servers into a single list
     SERVERS = [s for group in SERVER_GROUPS.values() for s in group]
-````
+```
 
 Edit **IP to Name mapping** in `monitor.js`:
 
@@ -285,6 +285,8 @@ sac       pts/1     2026-02-10 11:08  (192.168.3.208)
   "logout_time": null
 }
 
+```
+
 **Filtered out:**
 
 - Server-to-server SSH (e.g., `192.168.1.13` connecting to another server)
@@ -333,4 +335,7 @@ Built for internal GPU & compute server monitoring at SAC (Space Applications Ce
 - [Chart.js](https://www.chartjs.org/)
 - [Paramiko](https://www.paramiko.org/)
 - [Font Awesome](https://fontawesome.com/)
+
+```
+
 ```
