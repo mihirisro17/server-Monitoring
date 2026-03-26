@@ -394,7 +394,7 @@ MIT License — see [LICENSE](LICENSE) for details.
 
 <div align="center">
 
-<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=18&duration=2000&pause=500&color=6366F1&center=true&vCenter=true&width=400&lines=Mihir+Bulsara;SAC+Monitoring+Team;Space+Applications+Centre" alt="Author"/>
+<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=18&duration=2000&pause=500&color=6366F1&center=true&vCenter=true&width=400&lines=Mihir+Bulsara;VEDAS+Team;Space+Applications+Centre" alt="Author"/>
 
 <br/>
 
