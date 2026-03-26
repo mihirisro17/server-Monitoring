@@ -86,27 +86,30 @@ A real-time server monitoring and SSH user tracking dashboard built with **Flask
 
 ## 🏗️ Project Structure
 
+Below is the core directory structure for the server monitoring application:
+
+````text
 server_monitoring/
 │
 ├── app/
-│ ├── **init**.py ← Flask app factory + background thread start
-│ ├── routes.py ← All API routes and SSH logic
-│ └── alert_push.py ← WebSocket alert pusher
+│   ├── __init__.py      ← Flask app factory + background thread start
+│   ├── routes.py        ← All API routes and SSH logic
+│   └── alert_push.py    ← WebSocket alert pusher
 │
 ├── static/
-│ ├── css/
-│ │ └── style.css ← All styles + themes
-│ └── js/
-│ ├── monitor.js ← Main frontend logic
-│ └── lib/ ← Highcharts, Chart.js, etc.
+│   ├── css/
+│   │   └── style.css    ← All styles + themes
+│   └── js/
+│       ├── monitor.js   ← Main frontend logic
+│       └── lib/         ← Highcharts, Chart.js, etc.
 │
 ├── templates/
-│ └── index.html ← Single-page app template
+│   └── index.html       ← Single-page app template
 │
-├── config.py ← Server list and SSH credentials
-├── database.py ← SQLite DB for analytics history
-├── run.py ← App entry point
-├── user_tracking.json ← Auto-generated SSH session store
+├── config.py            ← Server list and SSH credentials
+├── database.py          ← SQLite DB for analytics history
+├── run.py               ← App entry point
+├── user_tracking.json   ← Auto-generated SSH session store
 └── requirements.txt
 
 ## ⚙️ Configuration
@@ -130,7 +133,7 @@ class Config:
 
     # Flatten all servers into a single list
     SERVERS = [s for group in SERVER_GROUPS.values() for s in group]
-```
+````
 
 Edit **IP to Name mapping** in `monitor.js`:
 
