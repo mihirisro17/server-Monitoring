@@ -1,0 +1,209 @@
+/* Alert Notification System - Isolated Styles */
+.alert-notification-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 1rem;
+}
+
+.alert-notify-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 1rem 1.5rem;
+    background-color: rgb(255, 255, 255);
+    border: none;
+    border-radius: 8px;
+    color: rgb(0, 0, 0);
+    font-weight: bold;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.3s ease;
+    gap: 0.5rem;
+    user-select: none;
+}
+
+.alert-notify-btn * {
+    pointer-events: none; /* Make entire button area clickable */
+}
+
+.alert-notify-btn i {
+    font-size: 20px;
+    color: #333;
+}
+
+
+/* Adjust the count badge */
+.alert-notify-count {
+    background-color: red;
+    color: white;
+    border-radius: 50%;
+    padding: 4px 8px;
+    font-size: 14px;
+    margin-left: 6px;
+}
+
+/* Modal Styles */
+.alert-notify-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+}
+
+.alert-notify-content {
+    position: relative;
+    background: #fff;
+    width: 90%;
+    max-width: 700px;
+    margin: 50px auto;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.alert-notify-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.alert-notify-header h3 {
+    margin: 0;
+    color: #333;
+}
+
+.alert-notify-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+    padding: 0 5px;
+}
+
+.alert-notify-stats {
+    padding: 10px 20px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    gap: 20px;
+}
+
+.alert-notify-stats span {
+    color: #666;
+}
+
+.alert-notify-list {
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+/* Alert Items */
+.alert-notify-item {
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    color: white;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.alert-notify-item:hover {
+    transform: translateY(-2px);
+}
+
+.alert-notify-item.critical {
+    background: linear-gradient(45deg, #ff5e62, #ff9966);
+}
+
+.alert-notify-item.warning {
+    background: linear-gradient(45deg, #f7b733, #fc4a1a);
+}
+
+.alert-notify-item.normal {
+    background: linear-gradient(45deg, #11998e, #38ef7d);
+}
+
+.alert-server-name {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.alert-type-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.2);
+    font-size: 12px;
+    margin-bottom: 5px;
+}
+
+.alert-message {
+    font-size: 14px;
+}
+
+.alert-timestamp {
+    font-size: 12px;
+    opacity: 0.8;
+    margin-top: 5px;
+}
+
+/* Detail Modal */
+.alert-detail-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 10000;
+}
+
+.alert-detail-content {
+    position: relative;
+    background: #000000;
+    width: 90%;
+    max-width: 500px;
+    margin: 100px auto;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.alert-detail-close {
+    position: absolute;
+    right: 15px;
+    top: 15px;
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+}
+
+/* Scrollbar Styles */
+.alert-notify-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.alert-notify-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.alert-notify-list::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 3px;
+}
+
+.alert-notify-list::-webkit-scrollbar-thumb:hover {
+    background: #666;
+}

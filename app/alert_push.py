@@ -1,0 +1,23 @@
+import requests
+import socket
+
+ALERT_ENDPOINT = "http://127.0.0.1:5015/push-alert"
+MONITOR_SOURCE = socket.gethostname()  # or hardcode e.g. "server_monitor_dashboard"
+TIMEOUT = 3  # seconds
+
+
+def send_alert_to_socket(category, alert_type, message, server_name, metadata=None):
+    payload = {
+        "category": category,            # e.g. "server"
+        "type": alert_type,              # e.g. "offline", "cpu_high"
+        "message": message,
+        "source": MONITOR_SOURCE,        # identifies THIS monitoring system
+        "server": server_name,
+        "metadata": metadata or {},
+    }
+    try:
+        r = requests.post(ALERT_ENDPOINT, json=payload, timeout=TIMEOUT)
+        if not r.ok:
+            print("Failed to push alert:", r.status_code, r.text)
+    except Exception as exc:
+        print("Error pushing alert:", exc)
