@@ -86,26 +86,28 @@ A real-time server monitoring and SSH user tracking dashboard built with **Flask
 
 ## 🏗️ Project Structure
 
-server*monitoring/
+server_monitoring/
+│
 ├── app/
-│ ├── \_init*.py # Flask app factory + background thread start
-│ ├── routes.py # All API routes and SSH logic
-│ └── alert_push.py # WebSocket alert pusher
+│ ├── **init**.py ← Flask app factory + background thread start
+│ ├── routes.py ← All API routes and SSH logic
+│ └── alert_push.py ← WebSocket alert pusher
+│
 ├── static/
 │ ├── css/
-│ │ └── style.css # All styles + themes
+│ │ └── style.css ← All styles + themes
 │ └── js/
-│ ├── monitor.js # Main frontend logic
-│ └── lib/ # Highcharts, Chart.js, etc.
+│ ├── monitor.js ← Main frontend logic
+│ └── lib/ ← Highcharts, Chart.js, etc.
+│
 ├── templates/
-│ └── index.html # Single-page app template
-├── config.py # Server list and configuration
-├── database.py # SQLite DB operations
-├── run.py # App entry point
-├── user_tracking.json # Auto-generated SSH session store
+│ └── index.html ← Single-page app template
+│
+├── config.py ← Server list and SSH credentials
+├── database.py ← SQLite DB for analytics history
+├── run.py ← App entry point
+├── user_tracking.json ← Auto-generated SSH session store
 └── requirements.txt
-
----
 
 ## ⚙️ Configuration
 
@@ -246,25 +248,42 @@ tracking_thread.start()
 
 ---
 
-## 🛡️ SSH User Tracking — How It Works
+# 🛡️ SSH User Tracking Dashboard
 
-Server (who command output)
-sac pts/1 2026-02-10 11:08 (192.168.3.208)
-│ │ │ │
-│ │ Actual login time └── User IP
-│ └── Terminal
-└── Username
+A real-time server monitoring application that tracks active SSH user sessions across multiple Linux servers. Built with Flask and WebSockets, this tool provides a live dashboard to monitor who is logged in, their session durations, and their client IPs.
 
-→ Stored in user_tracking.json with:
+## ✨ Features
 
-- login_time: "2026-02-10T11:08:00" ✅ (from who)
-- first_seen: "2026-02-10T11:08:00" ✅ (actual)
-- last_seen: updated every 30s ✅
-- duration: last_seen - first_seen ✅
+- **Real-Time Tracking:** Parses live session data directly from the servers using native Linux commands.
+- **Live Dashboard:** Single-page web interface built with modern chart libraries (Chart.js/Highcharts) to visualize server traffic.
+- **WebSocket Alerts:** Pushes immediate notifications to the frontend when a new user logs in or a session drops.
+- **Analytics History:** Logs all session data into a local SQLite database for historical reporting and auditing.
+- **Multi-Server Support:** Monitor multiple nodes concurrently from a centralized `config.py` file.
+
+## ⚙️ How It Works
+
+The tracker runs the Linux `who` command on each server and parses real login times:
+
+```text
+$ who
+sac       pts/1     2026-02-10 11:08  (192.168.3.208)
+│         │         │                 │
+│         │         │                 └─ Client IP (user's machine)
+│         │         └─ Actual login time (not poll time)
+│         └─ Terminal
+└─ Username
+
+{
+  "login_time":  "2026-02-10T11:08:00",
+  "first_seen":  "2026-02-10T11:08:00",
+  "last_seen":   "2026-02-10T17:30:00",
+  "terminal":    "pts/1",
+  "logout_time": null
+}
 
 **Filtered out:**
 
-- Server-to-server SSH (e.g., `192.168.2.137` connecting to another server)
+- Server-to-server SSH (e.g., `192.168.1.13` connecting to another server)
 - Local display sessions (`:0`, `:1`, `:pts/9:S.0`)
 
 ---
@@ -297,7 +316,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 👨‍💻 Author
 
-**Vedas / SAC Monitoring Team**  
+**Vedas / SAC Monitoring Team**
 Built for internal GPU & compute server monitoring at SAC (Space Applications Centre)
 --By Mihir Bulsara
 
@@ -310,3 +329,4 @@ Built for internal GPU & compute server monitoring at SAC (Space Applications Ce
 - [Chart.js](https://www.chartjs.org/)
 - [Paramiko](https://www.paramiko.org/)
 - [Font Awesome](https://fontawesome.com/)
+```
