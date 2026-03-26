@@ -320,13 +320,21 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-## 👨‍💻 Author
+<br>
 
-**Vedas / SAC Monitoring Team**
-Built for internal GPU & compute server monitoring at SAC (Space Applications Centre)
---By Mihir Bulsara
+<div align="center">
+  <h2>👨‍💻 Author</h2>
+  <p>
+    <b>Mihir Bulsara</b><br>
+    <i>Vedas / SAC Monitoring Team</i>
+  </p>
+  <p>
+    Built for internal GPU & compute server monitoring at<br>
+    <b>SAC (Space Applications Centre)</b>
+  </p>
+</div>
 
----
+<br>
 
 ## ⭐ Acknowledgements
 
@@ -335,7 +343,5 @@ Built for internal GPU & compute server monitoring at SAC (Space Applications Ce
 - [Chart.js](https://www.chartjs.org/)
 - [Paramiko](https://www.paramiko.org/)
 - [Font Awesome](https://fontawesome.com/)
-
-```
 
 ```
