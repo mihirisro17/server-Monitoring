@@ -242,11 +242,11 @@ class Config:
 ```javascript
 // Maps client IPs to human-friendly display names
 const IP_NAME_MAP = {
-  "192.168.1.220": "Harish",
-  "192.168.1.141": "Vikrant",
-  "192.168.1.221": "Karnav",
-  "192.168.1.205": "Vidit",
-  "192.168.1.210": "Arpan",
+  "192.168.1.220": "user1",
+  "192.168.1.141": "user2",
+  "192.168.1.221": "user3",
+  "192.168.1.205": "user4",
+  "192.168.1.210": "user5",
 };
 ```
 
