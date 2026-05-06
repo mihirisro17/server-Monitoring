@@ -417,8 +417,10 @@ function updateStats(servers) {
           }
         }
       }
+    } else if (server.status === "ssh_unreachable") {
+      hasAlert = true; // SSH unreachable = warning alert
     } else {
-      hasAlert = true; // Offline servers trigger an alert
+      hasAlert = true; // Offline = critical alert
     }
 
     if (hasAlert) {
@@ -547,7 +549,9 @@ function createGroupSection(groupName, servers) {
 
 function createServerCard(server) {
   const card = document.createElement("div");
-  card.className = `server-card ${server.status} slide-up`;
+  const cardStatusClass =
+    server.status === "ssh_unreachable" ? "ssh-unreachable" : server.status;
+  card.className = `server-card ${cardStatusClass} slide-up`;
   card.onclick = (event) => {
     // Don't open modal if clicking on buttons or interactive elements
     if (
@@ -624,7 +628,9 @@ function createServerCard(server) {
   card.innerHTML = `
     <div class="server-header">
         <h3>${server.name}</h3>
-        <span class="status-badge ${server.status}">${server.status}</span>
+        <span class="status-badge ${server.status === "ssh_unreachable" ? "ssh-unreachable" : server.status}">
+  ${server.status === "ssh_unreachable" ? "⚠ SSH UNREACHABLE" : server.status}
+</span>
         ${
           server._stateInfo && server._stateInfo.changed
             ? `<span class="server-transition-badge">
@@ -648,9 +654,17 @@ function createServerCard(server) {
             <span class="stat-value ${storageStatus}">${storageValue}</span>
         </div>
     </div>
-
-    ${renderStorageAlertDetails(getStorageAlertDetails(server), server)}
-`;
+    ${
+      server.status === "ssh_unreachable"
+        ? `
+  <div class="ssh-unreachable-notice">
+    <i class="fas fa-ethernet"></i> Ping OK &nbsp;|&nbsp;
+    <i class="fas fa-times-circle"></i> SSH not responding
+  </div>`
+        : ""
+    }
+${renderStorageAlertDetails(getStorageAlertDetails(server), server)}
+    `;
 
   return card;
 }
@@ -723,6 +737,7 @@ function initLiveCPUChart(serverName, initialCPU) {
         },
       ],
     },
+    accessibility: { enabled: false },
     legend: { enabled: false },
     credits: { enabled: false },
     exporting: { enabled: false },
@@ -838,7 +853,6 @@ function showServerDetails(serverName) {
 function openModal(server) {
   const modal = document.getElementById("server-modal");
   const modalTitle = document.getElementById("modal-server-name");
-
   if (!modal || !modalTitle) {
     console.error("Modal elements not found!");
     return;
@@ -847,31 +861,92 @@ function openModal(server) {
   modalTitle.textContent = server.name;
   modal.classList.add("show");
 
-  // ✅ FIX: Reset tabs visibility and state
+  // ── Server Switcher ──────────────────────────────────────────
+  const allServers = (window.currentServersData || [])
+    .slice()
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const currentIdx = allServers.findIndex((s) => s.name === server.name);
+  const prevServer =
+    currentIdx > 0
+      ? allServers[currentIdx - 1]
+      : allServers[allServers.length - 1];
+  const nextServer =
+    currentIdx < allServers.length - 1
+      ? allServers[currentIdx + 1]
+      : allServers[0];
+
+  let switcherEl = document.getElementById("modal-server-switcher");
+  if (!switcherEl) {
+    switcherEl = document.createElement("div");
+    switcherEl.id = "modal-server-switcher";
+    modalTitle.parentNode.insertBefore(switcherEl, modalTitle.nextSibling);
+  }
+
+  switcherEl.innerHTML = `
+    <div class="server-switcher">
+      <button class="switcher-btn" onclick="switchModalServer('${prevServer.name}')" title="Previous: ${prevServer.name}">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+      <div class="switcher-dropdown-wrap">
+        <select class="switcher-select" onchange="switchModalServer(this.value)">
+          ${allServers
+            .map(
+              (s) => `
+            <option value="${s.name}" ${s.name === server.name ? "selected" : ""}>
+              ${s.name} ${s.status !== "online" ? "⚠" : "●"}
+            </option>
+          `,
+            )
+            .join("")}
+        </select>
+        <span class="switcher-counter">${currentIdx + 1} / ${allServers.length}</span>
+      </div>
+      <button class="switcher-btn" onclick="switchModalServer('${nextServer.name}')" title="Next: ${nextServer.name}">
+        <i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
+  `;
+
+  // ── Tabs reset ───────────────────────────────────────────────
   const tabsContainer = document.querySelector(".tabs");
   const allTabs = document.querySelectorAll(".tabs .tab");
   const allTabContents = document.querySelectorAll(".tab-content");
-
-  if (tabsContainer) {
-    tabsContainer.style.display = "flex"; // Make sure tabs are visible
-  }
-
-  // Reset all tabs
+  if (tabsContainer) tabsContainer.style.display = "flex";
   allTabs.forEach((tab) => tab.classList.remove("active"));
   allTabContents.forEach((content) => content.classList.remove("active"));
 
-  // Activate Overview tab
   const overviewTab = document.querySelector('[data-tab="overview"]');
   const overviewContent = document.getElementById("overview-tab");
-
   if (overviewTab) overviewTab.classList.add("active");
   if (overviewContent) overviewContent.classList.add("active");
 
-  // Setup tabs functionality
   setupTabs();
-
-  // Render overview content
   renderOverviewTab(server);
+}
+
+// ── Switch server without closing modal ──────────────────────────
+function switchModalServer(serverName) {
+  stopLiveCPUUpdates();
+  if (liveCPUChart) {
+    liveCPUChart.destroy();
+    liveCPUChart = null;
+  }
+
+  showLoading();
+  fetch(`${API_BASE}/api/status`)
+    .then((r) => r.json())
+    .then((data) => {
+      const server = data.servers.find((s) => s.name === serverName);
+      if (server) {
+        currentServer = server;
+        openModal(server);
+      }
+      hideLoading();
+    })
+    .catch((err) => {
+      console.error("Switch error:", err);
+      hideLoading();
+    });
 }
 
 function closeModal() {
@@ -1148,7 +1223,38 @@ function renderOverviewTab(server) {
         </div>
     `;
 
+  // Append history charts section placeholder
+
   document.getElementById("overview-tab").innerHTML = html;
+
+  // Draw memory pie chart
+  if (memory) {
+    setTimeout(() => {
+      const canvas = document.getElementById("memory-chart");
+      if (canvas) drawMemoryPieChart(canvas, memory);
+    }, 100);
+  }
+
+  // Init live CPU chart
+  if (server.cpu != null && server.cpu !== undefined) {
+    initLiveCPUChart(server.name, server.cpu);
+  }
+
+  // Load 24h history charts ONCE, after DOM settles
+  setTimeout(() => loadHistoryCharts(server.name), 200);
+
+  if (memory) {
+    setTimeout(() => {
+      const canvas = document.getElementById("memory-chart");
+      if (canvas) drawMemoryPieChart(canvas, memory);
+    }, 100);
+  }
+  if (server.cpu != null && server.cpu !== undefined) {
+    initLiveCPUChart(server.name, server.cpu);
+  }
+
+  // Load 24h history charts after DOM is ready
+  //   setTimeout(() => loadHistoryCharts(server.name), 150);
 
   if (memory) {
     setTimeout(() => {
@@ -1162,6 +1268,227 @@ function renderOverviewTab(server) {
   if (server.cpu !== null && server.cpu !== undefined) {
     initLiveCPUChart(server.name, server.cpu);
   }
+}
+
+function loadHistoryCharts(serverName) {
+  const chartIds = ["cpu", "mem", "storage"];
+  const showNoData = (id, msg = "No data yet") => {
+    const el = document.getElementById(`history-${id}-chart`);
+    if (el)
+      el.innerHTML = `<div class="hc-no-data"><i class="fas fa-database"></i><p>${msg}</p></div>`;
+  };
+
+  fetch(
+    `${API_BASE}/api/server_metrics_history?server=${encodeURIComponent(serverName)}&days=1`,
+  )
+    .then((r) => {
+      console.log(`📡 History API status: ${r.status} for ${serverName}`); // ← ADD THIS
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json();
+    })
+    .then((data) => {
+      console.log(
+        "📦 Raw history response:",
+        JSON.stringify(data).slice(0, 500),
+      ); // ← ADD THIS
+      const metrics = Array.isArray(data.metrics) ? data.metrics : [];
+      console.log(`📊 Total rows: ${metrics.length}`); // ← ADD THIS
+      if (metrics.length > 0) {
+        console.log("🔍 First row keys:", JSON.stringify(metrics[0])); // ← SHOWS FIELD NAMES
+      }
+
+      if (!metrics.length) {
+        chartIds.forEach((id) => showNoData(id, "No history data yet"));
+        return;
+      }
+
+      const cpuData = [],
+        memData = [],
+        storageData = [];
+
+      metrics.forEach((m) => {
+        const ts = new Date(m.timestamp).getTime();
+        if (isNaN(ts)) return;
+
+        // API returns flat floats: m.cpu, m.memory, m.root_storage
+        const cpuVal = m.cpu;
+        if (cpuVal != null && !isNaN(cpuVal))
+          cpuData.push([ts, parseFloat(Number(cpuVal).toFixed(1))]);
+
+        const memVal = m.memory;
+        if (memVal != null && !isNaN(memVal))
+          memData.push([ts, parseFloat(Number(memVal).toFixed(1))]);
+
+        const stoVal = m.root_storage;
+        if (stoVal != null && !isNaN(stoVal))
+          storageData.push([ts, parseFloat(Number(stoVal).toFixed(1))]);
+      });
+
+      console.log(
+        `✅ Parsed — CPU: ${cpuData.length}, MEM: ${memData.length}, STO: ${storageData.length}`,
+      );
+
+      const makeOptions = (
+        color,
+        gradColor,
+        warnLine,
+        critLine,
+        seriesName,
+        pointData,
+      ) => ({
+        chart: {
+          type: "areaspline",
+          backgroundColor: "transparent",
+          height: 180,
+          animation: false,
+          style: { fontFamily: "inherit" },
+          margin: [10, 10, 30, 40],
+        },
+        title: { text: null },
+        credits: { enabled: false },
+        exporting: { enabled: false },
+        legend: { enabled: false },
+        xAxis: {
+          type: "datetime",
+          gridLineColor: "rgba(255,255,255,0.05)",
+          lineColor: "rgba(255,255,255,0.08)",
+          tickColor: "rgba(255,255,255,0.08)",
+          labels: {
+            style: { color: "#666", fontSize: "10px" },
+            format: "{value:%H:%M}",
+          },
+        },
+        yAxis: {
+          title: { text: null },
+          min: 0,
+          max: 100,
+          gridLineColor: "rgba(255,255,255,0.06)",
+          labels: {
+            style: { color: "#666", fontSize: "10px" },
+            format: "{value}%",
+          },
+          plotLines: [
+            {
+              value: warnLine,
+              color: "#f59e0b",
+              dashStyle: "ShortDash",
+              width: 1,
+              label: {
+                text: `${warnLine}%`,
+                style: { color: "#f59e0b", fontSize: "9px" },
+              },
+            },
+            {
+              value: critLine,
+              color: "#ef4444",
+              dashStyle: "ShortDash",
+              width: 1,
+              label: {
+                text: `${critLine}%`,
+                style: { color: "#ef4444", fontSize: "9px" },
+              },
+            },
+          ],
+        },
+        tooltip: {
+          backgroundColor: "rgba(10,10,20,0.93)",
+          borderColor: color,
+          borderRadius: 8,
+          shadow: false,
+          style: { color: "#e2e8f0", fontSize: "12px" },
+          formatter: function () {
+            return `<b>${Highcharts.dateFormat("%d %b %H:%M", this.x)}</b><br/>
+                    ${seriesName}: <b style="color:${color}">${this.y.toFixed(1)}%</b>`;
+          },
+        },
+        series: [
+          {
+            name: seriesName,
+            data: pointData,
+            color: color,
+            fillColor: {
+              linearGradient: { x1: 0, x2: 0, y1: 0, y2: 1 },
+              stops: [
+                [0, gradColor],
+                [1, "rgba(0,0,0,0)"],
+              ],
+            },
+            fillOpacity: 0.4,
+            lineWidth: 2,
+            marker: {
+              enabled: false,
+              states: { hover: { enabled: true, radius: 3 } },
+            },
+            threshold: null,
+          },
+        ],
+      });
+
+      // CPU
+      const cpuEl = document.getElementById("history-cpu-chart");
+      if (cpuEl) {
+        cpuData.length
+          ? ((cpuEl.innerHTML = ""),
+            Highcharts.chart(
+              "history-cpu-chart",
+              makeOptions(
+                "#667eea",
+                "rgba(102,126,234,0.35)",
+                70,
+                90,
+                "CPU",
+                cpuData,
+              ),
+            ))
+          : showNoData("cpu", "No CPU history");
+      }
+
+      // Memory
+      const memEl = document.getElementById("history-mem-chart");
+      if (memEl) {
+        memData.length
+          ? ((memEl.innerHTML = ""),
+            Highcharts.chart(
+              "history-mem-chart",
+              makeOptions(
+                "#06b6d4",
+                "rgba(6,182,212,0.35)",
+                75,
+                90,
+                "Memory",
+                memData,
+              ),
+            ))
+          : showNoData("mem", "No memory history");
+      }
+
+      // Storage
+      const stoEl = document.getElementById("history-storage-chart");
+      if (stoEl) {
+        if (storageData.length) {
+          stoEl.innerHTML = "";
+          const last = storageData[storageData.length - 1][1];
+          const stoColor =
+            last > 95 ? "#ef4444" : last > 80 ? "#f59e0b" : "#10b981";
+          const stoGrad =
+            last > 95
+              ? "rgba(239,68,68,0.35)"
+              : last > 80
+                ? "rgba(245,158,11,0.35)"
+                : "rgba(16,185,129,0.35)";
+          Highcharts.chart(
+            "history-storage-chart",
+            makeOptions(stoColor, stoGrad, 80, 95, "Storage", storageData),
+          );
+        } else {
+          showNoData("storage", "No storage history");
+        }
+      }
+    })
+    .catch((err) => {
+      console.error("❌ History charts error:", err);
+      chartIds.forEach((id) => showNoData(id, `Error: ${err.message}`));
+    });
 }
 
 function renderStorageTab(server) {
@@ -1292,50 +1619,63 @@ function renderStorageTab(server) {
   });
 }
 
+// Global registry to track Chart.js instances by canvas ID
+if (!window._storageChartRegistry) window._storageChartRegistry = {};
+
 function drawStorageMiniChart(index, usedPercent, status) {
-  const canvas = document.getElementById(`storage-chart-${index}`);
+  const canvasId = `storage-chart-${index}`;
+  const canvas = document.getElementById(canvasId);
   if (!canvas) {
-    console.error(`Canvas not found: storage-chart-${index}`);
+    console.warn("Canvas not found:", canvasId);
     return;
   }
 
-  const ctx = canvas.getContext("2d");
+  // ✅ Destroy via registry first (survives DOM innerHTML replacement)
+  if (window._storageChartRegistry[canvasId]) {
+    try {
+      window._storageChartRegistry[canvasId].destroy();
+    } catch (e) {}
+    delete window._storageChartRegistry[canvasId];
+  }
+  // ✅ Also destroy via Chart.js v3 API as safety net
+  try {
+    const existing = Chart.getChart(canvas);
+    if (existing) existing.destroy();
+  } catch (e) {}
+
+  if (typeof Chart === "undefined") {
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#fff";
+    ctx.font = "14px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText(
+      `${usedPercent.toFixed(1)}%`,
+      canvas.width / 2,
+      canvas.height / 2,
+    );
+    return;
+  }
+
   canvas.width = 160;
   canvas.height = 160;
 
-  const freePercent = 100 - usedPercent;
+  const usedColor =
+    status === "critical"
+      ? "#ef4444"
+      : status === "warning"
+        ? "#f59e0b"
+        : status === "moderate"
+          ? "#3b82f6"
+          : "#10b981";
 
-  // Color based on status
-  let usedColor = "#10b981"; // green
-  let freeColor = "#e5e7eb";
-
-  if (status === "critical") {
-    usedColor = "#ef4444"; // red
-  } else if (status === "warning") {
-    usedColor = "#f59e0b"; // orange
-  } else if (status === "moderate") {
-    usedColor = "#3b82f6"; // blue
-  }
-
-  // Check if Chart is defined
-  if (typeof Chart === "undefined") {
-    console.error("Chart.js is not loaded!");
-    // Draw simple text fallback
-    ctx.fillStyle = "#fff";
-    ctx.font = "20px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText(`${usedPercent.toFixed(1)}%`, 80, 80);
-    return;
-  }
-
-  new Chart(ctx, {
+  const instance = new Chart(canvas.getContext("2d"), {
     type: "doughnut",
     data: {
       labels: ["Used", "Free"],
       datasets: [
         {
-          data: [usedPercent, freePercent],
-          backgroundColor: [usedColor, freeColor],
+          data: [usedPercent, 100 - usedPercent],
+          backgroundColor: [usedColor, "#1e293b"],
           borderWidth: 0,
         },
       ],
@@ -1344,12 +1684,13 @@ function drawStorageMiniChart(index, usedPercent, status) {
       responsive: false,
       maintainAspectRatio: false,
       cutout: "75%",
-      plugins: {
-        legend: { display: false },
-        tooltip: { enabled: false },
-      },
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      animation: { animateRotate: true, animateScale: false },
     },
   });
+
+  // Store in registry
+  window._storageChartRegistry[canvasId] = instance;
 }
 
 function analyzeStorage(serverName, mountpoint) {
@@ -2022,13 +2363,12 @@ function loadAlerts() {
 
   const container = document.getElementById("alerts-container");
 
-  // Show loading
   container.innerHTML = `
-        <div class="loading-state">
-            <div class="loading-spinner-large"></div>
-            <p>Loading alerts...</p>
-        </div>
-    `;
+    <div class="loading-state">
+      <div class="loading-spinner-large"></div>
+      <p>Loading alerts...</p>
+    </div>
+  `;
 
   fetch(`${API_BASE}/api/alerts`)
     .then((response) => {
@@ -2050,159 +2390,167 @@ function loadAlerts() {
 
       if (alertsArray.length === 0) {
         container.innerHTML = `
-                    <div class="modern-no-alerts">
-                        <i class="fas fa-check-circle"></i>
-                        <h3>All Systems Operational</h3>
-                        <p>No active alerts detected. All servers are running normally.</p>
-                    </div>
-                `;
+          <div class="modern-no-alerts">
+            <i class="fas fa-check-circle"></i>
+            <h3>All Systems Operational</h3>
+            <p>No active alerts detected. All servers are running normally.</p>
+          </div>
+        `;
         return;
       }
 
-      // Categorize alerts
+      // ── Categorize alerts ────────────────────────────────────
       const cpuAlerts = [];
       const memoryAlerts = [];
       const storageAlerts = [];
       const offlineAlerts = [];
+      const sshAlerts = [];
       const affectedServers = new Set();
 
+      // ✅ forEach is ONLY for categorizing — no HTML here
       alertsArray.forEach((alert) => {
         affectedServers.add(alert.server);
-        const alertType = (alert.type || "").toLowerCase();
-
-        if (alertType.includes("offline")) {
-          offlineAlerts.push(alert);
-        } else if (alertType.includes("cpu")) {
-          cpuAlerts.push(alert);
-        } else if (alertType.includes("memory")) {
-          memoryAlerts.push(alert);
-        } else {
-          storageAlerts.push(alert);
-        }
+        const alertType = alert.type.toLowerCase();
+        if (alertType.includes("offline")) offlineAlerts.push(alert);
+        else if (alertType.includes("ssh")) sshAlerts.push(alert);
+        else if (alertType.includes("cpu")) cpuAlerts.push(alert);
+        else if (alertType.includes("memory")) memoryAlerts.push(alert);
+        else storageAlerts.push(alert);
       });
 
       console.log("📊 Categories:", {
+        offline: offlineAlerts.length,
+        ssh: sshAlerts.length,
         cpu: cpuAlerts.length,
         memory: memoryAlerts.length,
         storage: storageAlerts.length,
-        offline: offlineAlerts.length,
       });
 
+      // ── Build HTML ONCE after forEach is done ────────────────
       const html = `
-                <div class="modern-alert-summary">
-                    <div class="modern-summary-box box-total">
-                        <div class="modern-summary-icon-wrap">
-                            <i class="fas fa-exclamation-triangle"></i>
-                        </div>
-                        <div class="modern-summary-info">
-                            <div class="modern-summary-number">${
-                              alertsArray.length
-                            }</div>
-                            <div class="modern-summary-label">Total Alerts</div>
-                        </div>
-                    </div>
-                    
-                    <div class="modern-summary-box box-servers">
-                        <div class="modern-summary-icon-wrap">
-                            <i class="fas fa-server"></i>
-                        </div>
-                        <div class="modern-summary-info">
-                            <div class="modern-summary-number">${
-                              affectedServers.size
-                            }</div>
-                            <div class="modern-summary-label">Affected Servers</div>
-                        </div>
-                    </div>
-                    
-                    <div class="modern-summary-box box-cpu">
-                        <div class="modern-summary-icon-wrap">
-                            <i class="fas fa-microchip"></i>
-                        </div>
-                        <div class="modern-summary-info">
-                            <div class="modern-summary-number">${
-                              cpuAlerts.length
-                            }</div>
-                            <div class="modern-summary-label">CPU Alerts</div>
-                        </div>
-                    </div>
-                    
-                    <div class="modern-summary-box box-memory">
-                        <div class="modern-summary-icon-wrap">
-                            <i class="fas fa-memory"></i>
-                        </div>
-                        <div class="modern-summary-info">
-                            <div class="modern-summary-number">${
-                              memoryAlerts.length
-                            }</div>
-                            <div class="modern-summary-label">Memory Alerts</div>
-                        </div>
-                    </div>
-                    
-                    <div class="modern-summary-box box-storage">
-                        <div class="modern-summary-icon-wrap">
-                            <i class="fas fa-hdd"></i>
-                        </div>
-                        <div class="modern-summary-info">
-                            <div class="modern-summary-number">${
-                              storageAlerts.length
-                            }</div>
-                            <div class="modern-summary-label">Storage Alerts</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="modern-alerts-wrapper">
-                    ${
-                      offlineAlerts.length > 0
-                        ? renderModernAlertCategory(
-                            "Offline Servers",
-                            offlineAlerts,
-                            "fa-power-off",
-                          )
-                        : ""
-                    }
-                    ${
-                      storageAlerts.length > 0
-                        ? renderModernAlertCategory(
-                            "Storage Alerts",
-                            storageAlerts,
-                            "fa-hdd",
-                          )
-                        : ""
-                    }
-                    ${
-                      cpuAlerts.length > 0
-                        ? renderModernAlertCategory(
-                            "CPU Alerts",
-                            cpuAlerts,
-                            "fa-microchip",
-                          )
-                        : ""
-                    }
-                    ${
-                      memoryAlerts.length > 0
-                        ? renderModernAlertCategory(
-                            "Memory Alerts",
-                            memoryAlerts,
-                            "fa-memory",
-                          )
-                        : ""
-                    }
-                </div>
-            `;
+        <div class="modern-alert-summary">
+          <div class="modern-summary-box box-total">
+            <div class="modern-summary-icon-wrap">
+              <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="modern-summary-info">
+              <div class="modern-summary-number">${alertsArray.length}</div>
+              <div class="modern-summary-label">Total Alerts</div>
+            </div>
+          </div>
 
+          <div class="modern-summary-box box-servers">
+            <div class="modern-summary-icon-wrap">
+              <i class="fas fa-server"></i>
+            </div>
+            <div class="modern-summary-info">
+              <div class="modern-summary-number">${affectedServers.size}</div>
+              <div class="modern-summary-label">Affected Servers</div>
+            </div>
+          </div>
+
+          <div class="modern-summary-box box-cpu">
+            <div class="modern-summary-icon-wrap">
+              <i class="fas fa-microchip"></i>
+            </div>
+            <div class="modern-summary-info">
+              <div class="modern-summary-number">${cpuAlerts.length}</div>
+              <div class="modern-summary-label">CPU Alerts</div>
+            </div>
+          </div>
+
+          <div class="modern-summary-box box-memory">
+            <div class="modern-summary-icon-wrap">
+              <i class="fas fa-memory"></i>
+            </div>
+            <div class="modern-summary-info">
+              <div class="modern-summary-number">${memoryAlerts.length}</div>
+              <div class="modern-summary-label">Memory Alerts</div>
+            </div>
+          </div>
+
+          <div class="modern-summary-box box-storage">
+            <div class="modern-summary-icon-wrap">
+              <i class="fas fa-hdd"></i>
+            </div>
+            <div class="modern-summary-info">
+              <div class="modern-summary-number">${storageAlerts.length}</div>
+              <div class="modern-summary-label">Storage Alerts</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modern-alerts-wrapper">
+          ${
+            offlineAlerts.length > 0
+              ? renderModernAlertCategory(
+                  "Offline Servers",
+                  offlineAlerts,
+                  "fa-power-off",
+                )
+              : ""
+          }
+
+          ${
+            sshAlerts.length > 0
+              ? `
+            <div class="alert-category ssh-unreachable">
+              <div class="alert-category-header">
+                <i class="fas fa-ethernet"></i>
+                <span>SSH Unreachable</span>
+                <span class="alert-count">${sshAlerts.length}</span>
+              </div>
+              ${sshAlerts.map((a) => renderAlertItem(a)).join("")}
+            </div>`
+              : ""
+          }
+
+          ${
+            storageAlerts.length > 0
+              ? renderModernAlertCategory(
+                  "Storage Alerts",
+                  storageAlerts,
+                  "fa-hdd",
+                )
+              : ""
+          }
+
+          ${
+            cpuAlerts.length > 0
+              ? renderModernAlertCategory(
+                  "CPU Alerts",
+                  cpuAlerts,
+                  "fa-microchip",
+                )
+              : ""
+          }
+
+          ${
+            memoryAlerts.length > 0
+              ? renderModernAlertCategory(
+                  "Memory Alerts",
+                  memoryAlerts,
+                  "fa-memory",
+                )
+              : ""
+          }
+        </div>
+      `;
+
+      // ✅ Set innerHTML ONCE here, outside forEach
       container.innerHTML = html;
       console.log("✅ Alerts rendered successfully");
     })
+    // ✅ .catch() is on the fetch chain, NOT after forEach
     .catch((error) => {
       console.error("❌ Error loading alerts:", error);
       container.innerHTML = `
-                <div class="modern-no-alerts">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <h3>Error Loading Alerts</h3>
-                    <p>${error.message}</p>
-                </div>
-            `;
+        <div class="modern-no-alerts">
+          <i class="fas fa-exclamation-triangle"></i>
+          <h3>Error Loading Alerts</h3>
+          <p>${error.message}</p>
+        </div>
+      `;
     });
 }
 
@@ -2356,7 +2704,11 @@ function renderAlertItem(alert) {
             </span>
         `;
   } else if (alert.type === "offline") {
-    detailsHtml = `<span class="alert-detail offline-badge"><i class="fas fa-power-off"></i> Server Offline</span>`;
+    if (alert.type?.toLowerCase().includes("ssh")) {
+      detailsHtml = `<span class="alert-detail ssh-badge"><i class="fas fa-ethernet"></i> Ping OK &nbsp;|&nbsp; <i class="fas fa-times-circle"></i> SSH Not Responding</span>`;
+    } else {
+      detailsHtml = `<span class="alert-detail offline-badge"><i class="fas fa-power-off"></i> Server Offline</span>`;
+    }
   }
 
   return `
@@ -3213,12 +3565,20 @@ function loadAllServers() {
                               ? "blink-warning"
                               : "";
 
-                        return `
-                            <div class="server-card ${server.status}" onclick="showServerDetails('${server.name}')">
-                                <div class="server-header">
-                                    <h3>${server.name}</h3>
-                                    <span class="status-badge ${server.status}">${server.status}</span>
-                                </div>
+                        const _sClass =
+                          server.status === "ssh_unreachable"
+                            ? "ssh-unreachable"
+                            : server.status;
+                        const _sBadge =
+                          server.status === "ssh_unreachable"
+                            ? "⚠ SSH UNREACHABLE"
+                            : server.status;
+                        return;
+                        `<div class="server-card ${_sClass}" onclick="showServerDetails('${server.name}')">
+                            <div class="server-header">
+                                <h3>${server.name}</h3>
+                                <span class="status-badge ${server.status === "ssh_unreachable" ? "ssh-unreachable" : server.status}">${_sBadge}</span>
+                            </div>
                                 <div class="server-stats">
                                     <div class="stat ${cpuBlinkClass}">
                                         <span class="stat-label">CPU</span>
@@ -3308,6 +3668,7 @@ function filterServers(type) {
     case "alerts":
       filteredServers = servers.filter((s) => {
         if (s.status === "offline") return true;
+        if (s.status === "ssh_unreachable") return true;
         if (s.cpu && s.cpu > 75) return true;
         if (s.memory && s.memory.usage_percent > 75) return true;
         if (s.storage && Array.isArray(s.storage)) {
@@ -3480,6 +3841,27 @@ function showDashboardLoading() {
 }
 
 // ==================== Initialize ====================
+// document.addEventListener("DOMContentLoaded", () => {
+//   initNavigation();
+//   initSidebarToggle();
+//   initThemeSwitcher();
+//   initSearch();
+//   loadSettings();
+
+//   updateTimeDisplay();
+//   updateServers();
+//   showDashboardLoading();
+
+//   setInterval(updateTimeDisplay, 1000);
+//   window.refreshTimer = setInterval(updateServers, refreshInterval);
+
+//   document.getElementById("server-modal").addEventListener("click", (e) => {
+//     if (e.target.id === "server-modal") {
+//       closeModal();
+//     }
+//   });
+// });
+
 document.addEventListener("DOMContentLoaded", () => {
   initNavigation();
   initSidebarToggle();
@@ -3491,8 +3873,14 @@ document.addEventListener("DOMContentLoaded", () => {
   updateServers();
   showDashboardLoading();
 
+  // 1. Call it immediately so the user doesn't wait 10 seconds to see the first batch
+  loadAlerts();
+
   setInterval(updateTimeDisplay, 1000);
   window.refreshTimer = setInterval(updateServers, refreshInterval);
+
+  // 2. Set it to run every 10 seconds (10,000 milliseconds)
+  window.alertsTimer = setInterval(loadAlerts, 10000);
 
   document.getElementById("server-modal").addEventListener("click", (e) => {
     if (e.target.id === "server-modal") {

@@ -14,6 +14,7 @@ from .alert_push import send_alert_to_socket
 from flask import render_template_string
 import paramiko
 import traceback
+
 # At the top with other imports
 import sys
 import os
@@ -23,17 +24,14 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import database as db
 
 
-
-bp = Blueprint('main', __name__)
+bp = Blueprint("main", __name__)
 
 # Cache file path
-CACHE_FILE = 'server_cache.json'
-HISTORY_FILE = 'server_history.json'
-HISTORY_FILE1 = 'server_history1.json'
-DETAILED_HISTORY_DIR = 'detailed_history'
-USER_TRACKING_FILE = 'user_tracking.json'
-
-
+CACHE_FILE = "server_cache.json"
+HISTORY_FILE = "server_history.json"
+HISTORY_FILE1 = "server_history1.json"
+DETAILED_HISTORY_DIR = "detailed_history"
+USER_TRACKING_FILE = "user_tracking.json"
 
 
 def get_service_status(server, service_name):
@@ -41,33 +39,31 @@ def get_service_status(server, service_name):
     cmd = f"systemctl status {service_name} | head -10"
     output = execute_ssh_command(server, cmd)
 
-    status_info = {
-        'active': False,
-        'enabled': False,
-        'reason': 'Unknown'
-    }
+    status_info = {"active": False, "enabled": False, "reason": "Unknown"}
 
     if output:
-        if 'Active: active (running)' in output:
-            status_info['active'] = True
-        elif 'Active: failed' in output:
-            status_info['reason'] = 'Failed to start'
+        if "Active: active (running)" in output:
+            status_info["active"] = True
+        elif "Active: failed" in output:
+            status_info["reason"] = "Failed to start"
             # Get failure reason
-            reason_match = re.search(r'Main PID.*\((.*?)\)', output)
+            reason_match = re.search(r"Main PID.*\((.*?)\)", output)
             if reason_match:
-                status_info['reason'] = reason_match.group(1)
-        elif 'Active: inactive (dead)' in output:
-            status_info['reason'] = 'Stopped/Inactive'
+                status_info["reason"] = reason_match.group(1)
+        elif "Active: inactive (dead)" in output:
+            status_info["reason"] = "Stopped/Inactive"
 
-        if 'enabled' in output:
-            status_info['enabled'] = True
+        if "enabled" in output:
+            status_info["enabled"] = True
 
     return status_info
+
 
 def get_cpu_usage(server):
     cmd = "top -bn1 | grep '%Cpu' | awk '{print $2}'"
     output = execute_ssh_command(server, cmd)
     return float(output) if output else None
+
 
 def get_memory_info(server):
     cmd = "free -b | grep Mem"
@@ -102,21 +98,27 @@ def get_memory_info(server):
             actual_used = max(0, actual_used)
 
             return {
-                'total': total,
-                'used': used,
-                'free': free,
-                'shared': shared,
-                'buffers': buffers,
-                'cached': cached,
-                'actual_used': actual_used,
-                'usage_percent': round(usage_percent, 1),
-                'status': 'critical' if usage_percent >= 90 else 'warning' if usage_percent >= 75 else 'normal'
+                "total": total,
+                "used": used,
+                "free": free,
+                "shared": shared,
+                "buffers": buffers,
+                "cached": cached,
+                "actual_used": actual_used,
+                "usage_percent": round(usage_percent, 1),
+                "status": (
+                    "critical"
+                    if usage_percent >= 90
+                    else "warning" if usage_percent >= 75 else "normal"
+                ),
             }
     return None
+
 
 def run_command_async(server, command, result_container):
     """Runs a command in a separate thread."""
     result_container["output"] = execute_ssh_command(server, command, timeout=30)
+
 
 def get_fallback_storage(server):
     # Get partition for "/"
@@ -148,15 +150,17 @@ def get_fallback_storage(server):
     used = total - free
     percent = (used / total) * 100 if total > 0 else 0
 
-    return [{
-        "filesystem": device,
-        "size": total_size,
-        "used": used,
-        "available": free,
-        "percent": percent,
-        "mountpoint": mountpoint,
-        "status": get_status_(percent)
-    }]
+    return [
+        {
+            "filesystem": device,
+            "size": total_size,
+            "used": used,
+            "available": free,
+            "percent": percent,
+            "mountpoint": mountpoint,
+            "status": get_status_(percent),
+        }
+    ]
 
 
 def parse_df(output):
@@ -168,24 +172,27 @@ def parse_df(output):
                 total = int(parts[1])
                 used = int(parts[2])
                 available = int(parts[3])
-                percent = float(parts[4].rstrip('%'))
+                percent = float(parts[4].rstrip("%"))
                 mountpoint = parts[5]
 
-                storage.append({
-                    'filesystem': parts[0],
-                    'size': total,
-                    'used': used,
-                    'available': available,
-                    'percent': percent,
-                    'mountpoint': mountpoint,
-                    'status': get_status_(percent)
-                })
+                storage.append(
+                    {
+                        "filesystem": parts[0],
+                        "size": total,
+                        "used": used,
+                        "available": available,
+                        "percent": percent,
+                        "mountpoint": mountpoint,
+                        "status": get_status_(percent),
+                    }
+                )
             except:
                 continue
     return storage
 
+
 def get_status_(percent):
-    if percent >= 90:
+    if percent >= 95:
         return "critical"
     elif percent >= 80:
         return "warning"
@@ -193,14 +200,14 @@ def get_status_(percent):
         return "moderate"
     return "normal"
 
+
 def get_storage_info(server):
     slow_timeout = 5  # seconds for slow detection
     result_df = {"output": None}
 
     # Start df in a background thread
     df_thread = threading.Thread(
-        target=run_command_async,
-        args=(server, "df -B1 | tail -n +2", result_df)
+        target=run_command_async, args=(server, "df -B1 | tail -n +2", result_df)
     )
     df_thread.start()
 
@@ -231,13 +238,14 @@ def get_load_average(server):
     if output:
         parts = output.split()
         return {
-            'load_1min': float(parts[0]),
-            'load_5min': float(parts[1]),
-            'load_15min': float(parts[2]),
-            'running_processes': parts[3].split('/')[0],
-            'total_processes': parts[3].split('/')[1]
+            "load_1min": float(parts[0]),
+            "load_5min": float(parts[1]),
+            "load_15min": float(parts[2]),
+            "running_processes": parts[3].split("/")[0],
+            "total_processes": parts[3].split("/")[1],
         }
     return None
+
 
 def get_network_stats(server):
     cmd = "cat /proc/net/dev | tail -n +3"
@@ -248,17 +256,20 @@ def get_network_stats(server):
         for line in output.splitlines():
             parts = line.split()
             if len(parts) >= 10:
-                iface = parts[0].rstrip(':')
-                if iface == 'lo':
+                iface = parts[0].rstrip(":")
+                if iface == "lo":
                     continue
-                interfaces.append({
-                    'interface': iface,
-                    'rx_bytes': int(parts[1]),
-                    'rx_packets': int(parts[2]),
-                    'tx_bytes': int(parts[9]),
-                    'tx_packets': int(parts[10])
-                })
+                interfaces.append(
+                    {
+                        "interface": iface,
+                        "rx_bytes": int(parts[1]),
+                        "rx_packets": int(parts[2]),
+                        "tx_bytes": int(parts[9]),
+                        "tx_packets": int(parts[10]),
+                    }
+                )
     return interfaces
+
 
 def get_uptime(server):
     cmd = "uptime -p && uptime -s"
@@ -266,10 +277,11 @@ def get_uptime(server):
     if output:
         lines = output.splitlines()
         return {
-            'uptime_human': lines[0] if len(lines) > 0 else 'unknown',
-            'boot_time': lines[1] if len(lines) > 1 else 'unknown'
+            "uptime_human": lines[0] if len(lines) > 0 else "unknown",
+            "boot_time": lines[1] if len(lines) > 1 else "unknown",
         }
     return None
+
 
 def get_ssh_connections(server):
     cmd = "who | awk '{print $1,$5}'"
@@ -278,11 +290,12 @@ def get_ssh_connections(server):
 
     if output:
         for line in output.splitlines():
-            if '(' in line and ')' in line:
+            if "(" in line and ")" in line:
                 user, ip_with_parens = line.split()
-                ip = ip_with_parens.strip('()')
-                ssh_connections.append({'user': user, 'ip': ip})
+                ip = ip_with_parens.strip("()")
+                ssh_connections.append({"user": user, "ip": ip})
     return ssh_connections
+
 
 def get_running_services(server):
     cmd = "systemctl list-units --type=service --state=running --no-legend | awk '{print $1,$4}'"
@@ -293,13 +306,12 @@ def get_running_services(server):
         for line in output.splitlines():
             parts = line.split(None, 1)
             if len(parts) == 2:
-                service_name = parts[0].replace('.service', '')
-                services.append({
-                    'name': service_name,
-                    'description': parts[1],
-                    'status': 'running'
-                })
+                service_name = parts[0].replace(".service", "")
+                services.append(
+                    {"name": service_name, "description": parts[1], "status": "running"}
+                )
     return services
+
 
 def get_failed_services(server):
     """Get failed services"""
@@ -309,14 +321,13 @@ def get_failed_services(server):
 
     if output:
         for line in output.splitlines():
-            service_name = line.strip().replace('.service', '')
+            service_name = line.strip().replace(".service", "")
             status = get_service_status(server, service_name)
-            failed.append({
-                'name': service_name,
-                'status': 'failed',
-                'reason': status['reason']
-            })
+            failed.append(
+                {"name": service_name, "status": "failed", "reason": status["reason"]}
+            )
     return failed
+
 
 def get_top_processes_cpu(server, limit=5):
     cmd = f"ps aux --sort=-%cpu | head -n {limit + 1} | tail -n {limit}"
@@ -327,14 +338,17 @@ def get_top_processes_cpu(server, limit=5):
         for line in output.splitlines():
             parts = line.split(None, 10)
             if len(parts) >= 11:
-                processes.append({
-                    'user': parts[0],
-                    'pid': parts[1],
-                    'cpu': float(parts[2]),
-                    'mem': float(parts[3]),
-                    'command': parts[10][:60]
-                })
+                processes.append(
+                    {
+                        "user": parts[0],
+                        "pid": parts[1],
+                        "cpu": float(parts[2]),
+                        "mem": float(parts[3]),
+                        "command": parts[10][:60],
+                    }
+                )
     return processes
+
 
 def get_top_processes_memory(server, limit=5):
     cmd = f"ps aux --sort=-%mem | head -n {limit + 1} | tail -n {limit}"
@@ -345,85 +359,130 @@ def get_top_processes_memory(server, limit=5):
         for line in output.splitlines():
             parts = line.split(None, 10)
             if len(parts) >= 11:
-                processes.append({
-                    'user': parts[0],
-                    'pid': parts[1],
-                    'cpu': float(parts[2]),
-                    'mem': float(parts[3]),
-                    'command': parts[10][:60]
-                })
+                processes.append(
+                    {
+                        "user": parts[0],
+                        "pid": parts[1],
+                        "cpu": float(parts[2]),
+                        "mem": float(parts[3]),
+                        "command": parts[10][:60],
+                    }
+                )
     return processes
 
 
-def check_ping(ip, timeout = 2):
+def check_ping(ip, timeout=2):
     try:
-        result = subprocess.run(['ping', '-c', '1', '-W', str(timeout), ip], capture_output=True, timeout = timeout+1)
+        result = subprocess.run(
+            ["ping", "-c", "1", "-W", str(timeout), ip],
+            capture_output=True,
+            timeout=timeout + 1,
+        )
         return result.returncode == 0
     except:
         return False
 
+
 def get_server_status(server):
-    """Get comprehensive server status"""
+    """Get comprehensive server status with ping/SSH differentiation"""
+    server_name = server["name"]
+    server_ip = server["ip"]
+
     try:
-        test_cmd = "echo 'ok'"
+        # ── STEP 1: Try SSH first (fastest path) ──────────────────
+        test_cmd = "echo ok"
         status = execute_ssh_command(server, test_cmd)
 
-
-        if status == 'ok':
-
+        if status == "ok":
+            # ✅ SSH works → fully online
             ssh_connections = get_ssh_connections(server)
             track_ssh_users(server, ssh_connections)
-
             return {
-                'name': server['name'],
-                'group': server.get('group', 'default'),
-                'status': 'online',
-                'cpu': get_cpu_usage(server),
-                'memory': get_memory_info(server),
-                'storage': get_storage_info(server),
-                'load_average': get_load_average(server),
-                'network_stats': get_network_stats(server),
-                'uptime': get_uptime(server),
-                'ssh_connections': get_ssh_connections(server),
-                'services': get_running_services(server),
-                'failed_services': get_failed_services(server),
-                'top_cpu_processes': get_top_processes_cpu(server),
-                'top_mem_processes': get_top_processes_memory(server),
-                'last_updated': datetime.now().isoformat()
+                "name": server_name,
+                "group": server.get("group", "default"),
+                "status": "online",
+                "ping_status": "reachable",
+                "ssh_status": "reachable",
+                "cpu": get_cpu_usage(server),
+                "memory": get_memory_info(server),
+                "storage": get_storage_info(server),
+                "load_average": get_load_average(server),
+                "network_stats": get_network_stats(server),
+                "uptime": get_uptime(server),
+                "ssh_connections": ssh_connections,
+                "services": get_running_services(server),
+                "failed_services": get_failed_services(server),
+                "top_cpu_processes": get_top_processes_cpu(server),
+                "top_mem_processes": get_top_processes_memory(server),
+                "last_updated": datetime.now().isoformat(),
+            }
+
+        # ── STEP 2: SSH failed → check if server is pingable ──────
+        ping_ok = check_ping(server_ip)
+
+        if ping_ok:
+            # 🟡 Ping works but SSH doesn't → ssh_unreachable (WARNING)
+            return {
+                "name": server_name,
+                "group": server.get("group", "default"),
+                "status": "ssh_unreachable",
+                "ping_status": "reachable",
+                "ssh_status": "unreachable",
+                "error": "Server is reachable (ping OK) but SSH is not responding",
+                "last_updated": datetime.now().isoformat(),
             }
         else:
+            # 🔴 Ping also fails → truly offline
             return {
-                'name': server['name'],
-                'group': server.get('group', 'default'),
-                'status': 'offline',
-                'error': 'Connection failed',
-                'last_updated': datetime.now().isoformat()
+                "name": server_name,
+                "group": server.get("group", "default"),
+                "status": "offline",
+                "ping_status": "unreachable",
+                "ssh_status": "unreachable",
+                "error": "Server is offline (ping failed)",
+                "last_updated": datetime.now().isoformat(),
             }
+
     except Exception as e:
+        # On exception, still try ping to differentiate
+        ping_ok = check_ping(server_ip)
+        if ping_ok:
+            return {
+                "name": server_name,
+                "group": server.get("group", "default"),
+                "status": "ssh_unreachable",
+                "ping_status": "reachable",
+                "ssh_status": "unreachable",
+                "error": f"SSH error: {str(e)}",
+                "last_updated": datetime.now().isoformat(),
+            }
         return {
-            'name': server['name'],
-            'group': server.get('group', 'default'),
-            'status': 'offline',
-            'error': str(e),
-            'last_updated': datetime.now().isoformat()
+            "name": server_name,
+            "group": server.get("group", "default"),
+            "status": "offline",
+            "ping_status": "unreachable",
+            "ssh_status": "unreachable",
+            "error": str(e),
+            "last_updated": datetime.now().isoformat(),
         }
+
 
 def update_server_cache():
     """Update server cache in background"""
     servers = []
     with ThreadPoolExecutor(max_workers=30) as executor:
-        future_to_server = {executor.submit(get_server_status, server): server for server in Config.SERVERS}
+        future_to_server = {
+            executor.submit(get_server_status, server): server
+            for server in Config.SERVERS
+        }
         for future in as_completed(future_to_server):
             result = future.result()
             servers.append(result)
 
-    cache_data = {
-        'servers': servers,
-        'timestamp': time.time()
-    }
+    cache_data = {"servers": servers, "timestamp": time.time()}
 
     # Save to file
-    with open(CACHE_FILE, 'w') as f:
+    with open(CACHE_FILE, "w") as f:
         json.dump(cache_data, f)
 
     # Save to history for analytics
@@ -431,26 +490,27 @@ def update_server_cache():
 
     return cache_data
 
+
 def save_to_history(servers):
-    '''Save server metrics to history - CAPTURES SERVICES/PROCESSES ON ALERTS'''
+    """Save server metrics to history - CAPTURES SERVICES/PROCESSES ON ALERTS"""
 
     cutoff_date = datetime.now() - timedelta(days=200)
     current_time = datetime.now().isoformat()
 
     # Define thresholds
     CPU_WARNING = 75
-    CPU_CRITICAL = 90
+    CPU_CRITICAL = 95
     MEM_WARNING = 75
-    MEM_CRITICAL = 90
+    MEM_CRITICAL = 95
     STORAGE_WARNING = 80
-    STORAGE_CRITICAL = 90
+    STORAGE_CRITICAL = 95
 
     # ==========================================
     # PART 1: Save SIMPLE format for old API
     # ==========================================
     history_simple = []
     if os.path.exists(HISTORY_FILE):
-        with open(HISTORY_FILE, 'r') as f:
+        with open(HISTORY_FILE, "r") as f:
             try:
                 history_simple = json.load(f)
             except:
@@ -462,29 +522,28 @@ def save_to_history(servers):
     server_data_simple = []
     for s in servers:
         memory_percent = None
-        if s.get('memory'):
-            mem = s['memory']
-            if isinstance(mem, dict) and 'usage_percent' in mem:
-                memory_percent = mem['usage_percent']
-            elif isinstance(mem, dict) and 'actual_used' in mem and 'total' in mem:
-                total = mem.get('total', 0)
-                actual_used = mem.get('actual_used', 0)
+        if s.get("memory"):
+            mem = s["memory"]
+            if isinstance(mem, dict) and "usage_percent" in mem:
+                memory_percent = mem["usage_percent"]
+            elif isinstance(mem, dict) and "actual_used" in mem and "total" in mem:
+                total = mem.get("total", 0)
+                actual_used = mem.get("actual_used", 0)
                 if total > 0:
                     memory_percent = round((actual_used / total) * 100, 1)
 
-        server_data_simple.append({
-            'name': s['name'],
-            'cpu': s.get('cpu'),
-            'memory_percent': memory_percent,
-            'status': s['status']
-        })
+        server_data_simple.append(
+            {
+                "name": s["name"],
+                "cpu": s.get("cpu"),
+                "memory_percent": memory_percent,
+                "status": s["status"],
+            }
+        )
 
-    history_simple.append({
-        'timestamp': current_time,
-        'servers': server_data_simple
-    })
+    history_simple.append({"timestamp": current_time, "servers": server_data_simple})
 
-    with open(HISTORY_FILE, 'w') as f:
+    with open(HISTORY_FILE, "w") as f:
         json.dump(history_simple, f, indent=2)
 
     # ==========================================
@@ -493,213 +552,262 @@ def save_to_history(servers):
     server_data_detailed = []
 
     for s in servers:
-        # Get memory percentage
+        s_name = s["name"]
+        s_status = s.get("status", "offline")
+
+        # ── Memory ───────────────────────────────────────────────
         memory_percent = None
-        memory_status = 'normal'
-        if s.get('memory'):
-            mem = s['memory']
-            if isinstance(mem, dict) and 'usage_percent' in mem:
-                memory_percent = mem['usage_percent']
-            elif isinstance(mem, dict) and 'actual_used' in mem and 'total' in mem:
-                total = mem.get('total', 0)
-                actual_used = mem.get('actual_used', 0)
+        memory_status = "normal"
+        if s.get("memory"):
+            mem = s["memory"]
+            if isinstance(mem, dict) and "usage_percent" in mem:
+                memory_percent = mem["usage_percent"]
+            elif isinstance(mem, dict) and "actual_used" in mem and "total" in mem:
+                total = mem.get("total", 0)
+                actual_used = mem.get("actual_used", 0)
                 if total > 0:
                     memory_percent = round((actual_used / total) * 100, 1)
 
             if memory_percent:
                 if memory_percent > MEM_CRITICAL:
-                    memory_status = 'critical'
+                    memory_status = "critical"
                 elif memory_percent > MEM_WARNING:
-                    memory_status = 'warning'
+                    memory_status = "warning"
 
-        # Get CPU status
-        cpu_usage = s.get('cpu')
-        cpu_status = 'normal'
+        # ── CPU ───────────────────────────────────────────────────
+        cpu_usage = s.get("cpu")
+        cpu_status = "normal"
         if cpu_usage:
             if cpu_usage > CPU_CRITICAL:
-                cpu_status = 'critical'
+                cpu_status = "critical"
             elif cpu_usage > CPU_WARNING:
-                cpu_status = 'warning'
+                cpu_status = "warning"
 
-        # Get storage status
+        # ── Storage ───────────────────────────────────────────────
         storage_data = []
-        root_storage_status = 'normal'
+        root_storage_status = "normal"
         root_storage_percent = None
 
-        for storage in s.get('storage', []):
+        for storage in s.get("storage", []):
             storage_info = {
-                'mountpoint': storage['mountpoint'],
-                'percent': storage.get('percent', 0),
-                'size': storage.get('size', 0),
-                'used': storage.get('used', 0),
-                'available': storage.get('available', 0),
-                'status': storage.get('status', 'normal')
+                "mountpoint": storage["mountpoint"],
+                "percent": storage.get("percent", 0),
+                "size": storage.get("size", 0),
+                "used": storage.get("used", 0),
+                "available": storage.get("available", 0),
+                "status": storage.get("status", "normal"),
             }
             storage_data.append(storage_info)
 
-            if storage['mountpoint'] in ('/', '/root'):
-                root_storage_percent = storage.get('percent', 0)
+            if storage["mountpoint"] in ("/", "/root"):
+                root_storage_percent = storage.get("percent", 0)
                 if root_storage_percent > STORAGE_CRITICAL:
-                    root_storage_status = 'critical'
+                    root_storage_status = "critical"
                 elif root_storage_percent > STORAGE_WARNING:
-                    root_storage_status = 'warning'
+                    root_storage_status = "warning"
 
-        # Collect active alerts
+        # ── Collect Alerts ────────────────────────────────────────
         alerts = []
 
-        if s['status'] != 'online':
-            alerts.append({
-                'type': 'offline',
-                'message': f"Server '{s['name']}' is offline",
-                'severity': 'critical'
-            })
-        else:
-            if cpu_status == 'critical':
-                alerts.append({
-                    'type': 'cpu',
-                    'message': f"CPU usage is CRITICAL ({cpu_usage}%)",
-                    'severity': 'critical',
-                    'value': cpu_usage
-                })
-            elif cpu_status == 'warning':
-                alerts.append({
-                    'type': 'cpu',
-                    'message': f"CPU usage is HIGH ({cpu_usage}%)",
-                    'severity': 'warning',
-                    'value': cpu_usage
-                })
+        # 🔴 OFFLINE — ping failed, server truly down
+        if s_status == "offline":
+            alerts.append(
+                {
+                    "type": "offline",
+                    "message": f"Server '{s_name}' is OFFLINE (ping unreachable)",
+                    "severity": "critical",
+                    "ping_status": s.get("ping_status", "unreachable"),
+                    "ssh_status": s.get("ssh_status", "unreachable"),
+                }
+            )
 
-            if memory_status == 'critical':
-                alerts.append({
-                    'type': 'memory',
-                    'message': f"Memory usage is CRITICAL ({memory_percent}%)",
-                    'severity': 'critical',
-                    'value': memory_percent
-                })
-            elif memory_status == 'warning':
-                alerts.append({
-                    'type': 'memory',
-                    'message': f"Memory usage is HIGH ({memory_percent}%)",
-                    'severity': 'warning',
-                    'value': memory_percent
-                })
+        # 🟡 SSH UNREACHABLE — ping OK but SSH not responding
+        elif s_status == "ssh_unreachable":
+            alerts.append(
+                {
+                    "type": "ssh_unreachable",
+                    "message": f"Server '{s_name}' is reachable (ping OK) but SSH is NOT responding",
+                    "severity": "warning",
+                    "ping_status": s.get("ping_status", "reachable"),
+                    "ssh_status": s.get("ssh_status", "unreachable"),
+                }
+            )
 
-            if root_storage_status == 'critical':
-                alerts.append({
-                    'type': 'storage',
-                    'message': f"Root storage is CRITICAL ({root_storage_percent}%)",
-                    'severity': 'critical',
-                    'value': root_storage_percent
-                })
-            elif root_storage_status == 'warning':
-                alerts.append({
-                    'type': 'storage',
-                    'message': f"Root storage is HIGH ({root_storage_percent}%)",
-                    'severity': 'warning',
-                    'value': root_storage_percent
-                })
+        # ✅ ONLINE — check CPU / Memory / Storage thresholds
+        elif s_status == "online":
+            if cpu_status == "critical":
+                alerts.append(
+                    {
+                        "type": "cpu",
+                        "message": f"CPU usage is CRITICAL ({cpu_usage}%)",
+                        "severity": "critical",
+                        "value": cpu_usage,
+                    }
+                )
+            elif cpu_status == "warning":
+                alerts.append(
+                    {
+                        "type": "cpu",
+                        "message": f"CPU usage is HIGH ({cpu_usage}%)",
+                        "severity": "warning",
+                        "value": cpu_usage,
+                    }
+                )
 
-        # ==========================================
-        # NEW: CAPTURE SERVICES/PROCESSES WHEN ALERT
-        # ==========================================
-        # If ANY alert exists (warning or critical), capture full context
+            if memory_status == "critical":
+                alerts.append(
+                    {
+                        "type": "memory",
+                        "message": f"Memory usage is CRITICAL ({memory_percent}%)",
+                        "severity": "critical",
+                        "value": memory_percent,
+                    }
+                )
+            elif memory_status == "warning":
+                alerts.append(
+                    {
+                        "type": "memory",
+                        "message": f"Memory usage is HIGH ({memory_percent}%)",
+                        "severity": "warning",
+                        "value": memory_percent,
+                    }
+                )
+
+            if root_storage_status == "critical":
+                alerts.append(
+                    {
+                        "type": "storage",
+                        "message": f"Root storage is CRITICAL ({root_storage_percent}%)",
+                        "severity": "critical",
+                        "value": root_storage_percent,
+                    }
+                )
+            elif root_storage_status == "warning":
+                alerts.append(
+                    {
+                        "type": "storage",
+                        "message": f"Root storage is HIGH ({root_storage_percent}%)",
+                        "severity": "warning",
+                        "value": root_storage_percent,
+                    }
+                )
+
+        # ── Capture Services/Processes only when alerts exist ─────
         if alerts:
-            captured_services = s.get('services', [])
-            captured_failed_services = s.get('failed_services', [])
-            captured_top_cpu = s.get('top_cpu_processes', [])
-            captured_top_mem = s.get('top_mem_processes', [])
+            captured_services = s.get("services", [])
+            captured_failed_services = s.get("failed_services", [])
+            captured_top_cpu = s.get("top_cpu_processes", [])
+            captured_top_mem = s.get("top_mem_processes", [])
         else:
-            # No alerts = don't waste space storing processes
             captured_services = []
             captured_failed_services = []
             captured_top_cpu = []
             captured_top_mem = []
 
-        server_data_detailed.append({
-            'name': s['name'],
-            'group': s.get('group', 'default'),
-            'status': s['status'],
-            'cpu': {
-                'value': cpu_usage,
-                'status': cpu_status
-            },
-            'memory': {
-                'percent': memory_percent,
-                'status': memory_status,
-                'total': s.get('memory', {}).get('total') if s.get('memory') else None,
-                'used': s.get('memory', {}).get('actual_used') if s.get('memory') else None
-            },
-            'storage': storage_data,
-            'root_storage': {
-                'percent': root_storage_percent,
-                'status': root_storage_status
-            },
-            'load_average': s.get('load_average'),
-            'uptime': s.get('uptime'),
-            'alerts': alerts,
-            'alert_count': len(alerts),
-
-            # NEW FIELDS - Services and Processes
-            'services': captured_services,
-            'failed_services': captured_failed_services,
-            'top_cpu_processes': captured_top_cpu,
-            'top_mem_processes': captured_top_mem
-        })
+        server_data_detailed.append(
+            {
+                "name": s_name,
+                "group": s.get("group", "default"),
+                "status": s_status,
+                # ── New ping/ssh fields ──
+                "ping_status": s.get("ping_status", "unknown"),
+                "ssh_status": s.get("ssh_status", "unknown"),
+                # ── Metrics ──
+                "cpu": {
+                    "value": cpu_usage,
+                    "status": cpu_status,
+                },
+                "memory": {
+                    "percent": memory_percent,
+                    "status": memory_status,
+                    "total": (
+                        s.get("memory", {}).get("total") if s.get("memory") else None
+                    ),
+                    "used": (
+                        s.get("memory", {}).get("actual_used")
+                        if s.get("memory")
+                        else None
+                    ),
+                },
+                "storage": storage_data,
+                "root_storage": {
+                    "percent": root_storage_percent,
+                    "status": root_storage_status,
+                },
+                "load_average": s.get("load_average"),
+                "uptime": s.get("uptime"),
+                # ── Alerts ──
+                "alerts": alerts,
+                "alert_count": len(alerts),
+                # ── Services & Processes (only captured on alert) ──
+                "services": captured_services,
+                "failed_services": captured_failed_services,
+                "top_cpu_processes": captured_top_cpu,
+                "top_mem_processes": captured_top_mem,
+            }
+        )
 
     # Save to SQLite DATABASE
     db.save_server_metrics(server_data_detailed)
-
 
 
 def load_cache():
     """Load cache from file"""
     if os.path.exists(CACHE_FILE):
         try:
-            with open(CACHE_FILE, 'r') as f:
+            with open(CACHE_FILE, "r") as f:
                 return json.load(f)
         except:
             pass
     return None
 
-@bp.route('/home')
+
+@bp.route("/home")
 def index():
-    return render_template('index.html', user='Admin', url_prefix="/monitoring_server")
+    return render_template("index.html", user="Admin", url_prefix="/monitoring_server")
 
-@bp.route('/api/time')
+
+@bp.route("/api/time")
 def get_time():
-    return jsonify({
-        'timestamp': datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
-        'timezone': 'UTC'
-    })
+    return jsonify(
+        {
+            "timestamp": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
+            "timezone": "UTC",
+        }
+    )
 
-@bp.route('/api/status')
+
+@bp.route("/api/status")
 def get_status():
     """Get server status from cache or update"""
     cache = load_cache()
 
     # If cache is old or doesn't exist, update in background
-    if not cache or (time.time() - cache['timestamp']) > Config.CACHE_TIMEOUT:
+    if not cache or (time.time() - cache["timestamp"]) > Config.CACHE_TIMEOUT:
         cache = update_server_cache()
 
     return jsonify(cache)
 
-@bp.route('/api/refresh')
+
+@bp.route("/api/refresh")
 def force_refresh():
     """Force refresh server data"""
     cache = update_server_cache()
     return jsonify(cache)
 
-@bp.route('/api/analytics')
+
+@bp.route("/api/analytics")
 def get_analytics():
     """Get historical data for analytics"""
     if os.path.exists(HISTORY_FILE):
-        with open(HISTORY_FILE, 'r') as f:
+        with open(HISTORY_FILE, "r") as f:
             try:
                 history = json.load(f)
                 return jsonify(history)
             except:
                 return jsonify([])
     return jsonify([])
+
 
 # @bp.route('/api/server_metrics_history')
 # def get_server_metrics_history():
@@ -754,24 +862,18 @@ def get_analytics():
 
 #     return jsonify({'metrics': metrics})
 
-@bp.route('/api/server_metrics_history')
+
+@bp.route("/api/server_metrics_history")
 def get_server_metrics_history():
     """Get time-series metrics for charting - FROM DATABASE"""
-    server_name = request.args.get('server')
-    days = int(request.args.get('days', 7))
+    server_name = request.args.get("server")
+    days = int(request.args.get("days", 7))
 
     if not server_name:
-        return jsonify({'error': 'Server name required'}), 400
+        return jsonify({"error": "Server name required"}), 400
 
-    # Query from DATABASE
     metrics = db.get_server_metrics_history(server_name, days)
-    return jsonify({'metrics': metrics}), 400
-
-    # Query from DATABASE
-    metrics = db.get_server_metrics_history(server_name, days)
-
-    return jsonify({'metrics': metrics})
-
+    return jsonify({"metrics": metrics})  # ✅ NO status code = defaults to 200
 
 
 # @bp.route('/api/alert_history')
@@ -860,17 +962,18 @@ def get_server_metrics_history():
 #         'summary': summary
 #     })
 
-@bp.route('/api/alert_history')
+
+@bp.route("/api/alert_history")
 def get_alert_history():
     """Get alert history with filtering - FROM DATABASE"""
-    server_name = request.args.get('server')
-    alert_type = request.args.get('type')
-    severity = request.args.get('severity')
-    days = int(request.args.get('days', 7))
+    server_name = request.args.get("server")
+    alert_type = request.args.get("type")
+    severity = request.args.get("severity")
+    days = int(request.args.get("days", 7))
 
     # Query from DATABASE
     alerts, summary = db.get_alert_history(server_name, alert_type, severity, days)
-    return jsonify({'alerts': alerts, 'summary': summary})
+    return jsonify({"alerts": alerts, "summary": summary})
 
 
 # @bp.route('/api/server_comparison')
@@ -930,65 +1033,62 @@ def get_alert_history():
 
 #     return jsonify({'comparison': comparison_list})
 
-@bp.route('/api/server_comparison')
+
+@bp.route("/api/server_comparison")
 def get_server_comparison():
     """Compare metrics across multiple servers - FROM DATABASE"""
-    server_names = request.args.getlist('servers')
-    days = int(request.args.get('days', 1))
+    server_names = request.args.getlist("servers")
+    days = int(request.args.get("days", 1))
 
     if not server_names:
-        return jsonify({'error': 'At least one server name required'}), 400
+        return jsonify({"error": "At least one server name required"}), 400
 
     # Query from DATABASE
     comparison = db.get_server_comparison(server_names, days)
 
-    return jsonify({'comparison': comparison})
+    return jsonify({"comparison": comparison})
 
 
-
-@bp.route('/api/alert_trends')
+@bp.route("/api/alert_trends")
 def get_alert_trends():
     """Get alert trends over time"""
-    days = int(request.args.get('days', 30))
+    days = int(request.args.get("days", 30))
 
     if os.path.exists(HISTORY_FILE1):
-        with open(HISTORY_FILE1, 'r') as f:
+        with open(HISTORY_FILE1, "r") as f:
             try:
                 history = json.load(f)
             except json.JSONDecodeError as e:
                 print(f"Error loading history: {e}")
-                return jsonify({'error': 'Failed to load history'}), 500
+                return jsonify({"error": "Failed to load history"}), 500
     else:
-        return jsonify({'trends': []})
+        return jsonify({"trends": []})
 
     cutoff_date = datetime.now() - timedelta(days=days)
 
     # Group by date
-    daily_alerts = defaultdict(lambda: {
-        'total': 0,
-        'critical': 0,
-        'warning': 0,
-        'by_type': defaultdict(int)
-    })
+    daily_alerts = defaultdict(
+        lambda: {"total": 0, "critical": 0, "warning": 0, "by_type": defaultdict(int)}
+    )
 
     for entry in history:
         try:
-            entry_date = datetime.fromisoformat(entry['timestamp'])
+            entry_date = datetime.fromisoformat(entry["timestamp"])
             if entry_date < cutoff_date:
                 continue
 
-            date_key = entry_date.strftime('%Y-%m-%d')
+            date_key = entry_date.strftime("%Y-%m-%d")
 
-            for server in entry['servers']:
-                for alert in server.get('alerts', []):
-                    daily_alerts[date_key]['total'] += 1
+            for server in entry["servers"]:
+                for alert in server.get("alerts", []):
+                    daily_alerts[date_key]["total"] += 1
 
-                    if alert['severity'] == 'critical':
-                        daily_alerts[date_key]['critical'] += 1
-                    elif alert['severity'] == 'warning':
-                        daily_alerts[date_key]['warning'] += 1
+                    if alert["severity"] == "critical":
+                        daily_alerts[date_key]["critical"] += 1
+                    elif alert["severity"] == "warning":
+                        daily_alerts[date_key]["warning"] += 1
 
-                    daily_alerts[date_key]['by_type'][alert['type']] += 1
+                    daily_alerts[date_key]["by_type"][alert["type"]] += 1
         except Exception as e:
             print(f"Error processing alert trends: {e}")
             continue
@@ -996,16 +1096,16 @@ def get_alert_trends():
     # Convert to list
     trends = [
         {
-            'date': date,
-            'total': stats['total'],
-            'critical': stats['critical'],
-            'warning': stats['warning'],
-            'by_type': dict(stats['by_type'])
+            "date": date,
+            "total": stats["total"],
+            "critical": stats["critical"],
+            "warning": stats["warning"],
+            "by_type": dict(stats["by_type"]),
         }
         for date, stats in sorted(daily_alerts.items())
     ]
 
-    return jsonify({'trends': trends})
+    return jsonify({"trends": trends})
 
 
 # @bp.route('/api/server_health_score')
@@ -1120,18 +1220,19 @@ def get_alert_trends():
 
 #     return jsonify({'health_scores': sorted(health_scores, key=lambda x: x['health_score'], reverse=True)})
 
-@bp.route('/api/server_health_score')
+
+@bp.route("/api/server_health_score")
 def get_server_health_score():
     """Calculate health score for servers - FROM DATABASE"""
-    days = int(request.args.get('days', 7))
+    days = int(request.args.get("days", 7))
 
     # Query from DATABASE
     health_scores = db.get_server_health_scores(days)
 
-    return jsonify({'health_scores': health_scores})
+    return jsonify({"health_scores": health_scores})
 
 
-@bp.route('/api/alerts')
+@bp.route("/api/alerts")
 def alerts():
     cache = load_cache()
     if not cache:
@@ -1141,45 +1242,79 @@ def alerts():
     alert_servers = set()
 
     # --- CONFIGURATION: Define Warning & Critical Limits ---
-    # CPU Thresholds
-    CPU_WARNING = 75        # Warning > 75%
-    CPU_CRITICAL = 90       # Critical > 90%
+    CPU_WARNING = 75  # Warning > 75%
+    CPU_CRITICAL = 95  # Critical > 95%
+    MEM_WARNING = 75  # Warning > 75%
+    MEM_CRITICAL = 95  # Critical > 95%
+    STORAGE_WARNING = 80  # Warning > 80%
+    STORAGE_CRITICAL = 95  # Critical > 95%
+    # -------------------------------------------------------
 
-    # Memory Thresholds
-    MEM_WARNING = 75        # Warning > 75%
-    MEM_CRITICAL = 90       # Critical > 90%
-
-    # Storage Thresholds (Root partition)
-    STORAGE_WARNING = 80    # Warning > 80%
-    STORAGE_CRITICAL = 90   # Critical > 90%
-    # -----------------------------------------------------
-
-    for server in cache['servers']:
+    for server in cache["servers"]:
         server_has_alert = False
+        server_name = server["name"]
+        server_status = server.get("status", "offline")
 
-        # 1) Server offline (Always Critical)
-        if server['status'] != 'online':
-            msg = f"Server '{server['name']}' is offline"
-            alerts.append({
-                'server': server['name'],
-                'type': 'Offline',
-                'message': msg,
-                'state': 'alert' # Offline is always critical
-            })
-            alert_servers.add(server['name'])
-
+        # ── 1) OFFLINE — ping failed, server truly unreachable ────
+        if server_status == "offline":
+            msg = f"Server '{server_name}' is OFFLINE (ping unreachable)"
+            alerts.append(
+                {
+                    "server": server_name,
+                    "type": "Offline",
+                    "message": msg,
+                    "state": "alert",  # Critical
+                }
+            )
+            alert_servers.add(server_name)
             send_alert_to_socket(
                 category="server",
                 alert_type="offline",
                 message=msg,
-                server_name=server['name'],
-                metadata={"source_system": "server_monitor", "status": server['status']},
+                server_name=server_name,
+                metadata={
+                    "source_system": "server_monitor",
+                    "status": "offline",
+                    "ping_status": server.get("ping_status", "unreachable"),
+                    "ssh_status": server.get("ssh_status", "unreachable"),
+                },
             )
             continue
 
-        # 2) CPU (Updated to have Warning & Critical)
-        cpu_usage = server.get('cpu')
-        if cpu_usage:
+        # ── 2) SSH UNREACHABLE — ping OK but SSH not responding ───
+        if server_status == "ssh_unreachable":
+            msg = f"Server '{server_name}' is reachable (ping OK) but SSH is NOT responding"
+            alerts.append(
+                {
+                    "server": server_name,
+                    "type": "SSH",
+                    "message": msg,
+                    "state": "warning",  # Warning only, not critical
+                }
+            )
+            alert_servers.add(server_name)
+            send_alert_to_socket(
+                category="server",
+                alert_type="ssh_unreachable",
+                message=msg,
+                server_name=server_name,
+                metadata={
+                    "source_system": "server_monitor",
+                    "status": "ssh_unreachable",
+                    "ping_status": server.get("ping_status", "reachable"),
+                    "ssh_status": server.get("ssh_status", "unreachable"),
+                },
+            )
+            continue
+
+        # ── Skip any other non-online status ─────────────────────
+        if server_status != "online":
+            continue
+
+        # ── 3) CPU ────────────────────────────────────────────────
+        raw_cpu = server.get("cpu")
+        if raw_cpu is not None:
+            cpu_usage = round(raw_cpu, 2)
             state = None
             alert_type = None
 
@@ -1193,26 +1328,27 @@ def alerts():
                 alert_type = "warning"
 
             if state:
-                alerts.append({
-                    'server': server['name'],
-                    'type': 'CPU',
-                    'message': msg,
-                    'state': state,
-                })
+                alerts.append(
+                    {
+                        "server": server_name,
+                        "type": "CPU",
+                        "message": msg,
+                        "state": state,
+                    }
+                )
                 server_has_alert = True
-
                 send_alert_to_socket(
                     category="server",
                     alert_type=alert_type,
                     message=msg,
-                    server_name=server['name'],
+                    server_name=server_name,
                     metadata={"cpu": cpu_usage, "state": state},
                 )
 
-        # 3) Memory (Existing Warning/Critical Logic)
-        mem = server.get('memory')
+        # ── 4) Memory ─────────────────────────────────────────────
+        mem = server.get("memory")
         if mem:
-            usage = mem.get('usage_percent', 0)
+            usage = round(mem.get("usage_percent", 0), 2)
             state = None
             alert_type = None
 
@@ -1226,27 +1362,27 @@ def alerts():
                 alert_type = "warning"
 
             if state:
-                alerts.append({
-                    'server': server['name'],
-                    'type': 'Memory',
-                    'message': msg,
-                    'state': state,
-                })
+                alerts.append(
+                    {
+                        "server": server_name,
+                        "type": "Memory",
+                        "message": msg,
+                        "state": state,
+                    }
+                )
                 server_has_alert = True
-
                 send_alert_to_socket(
                     category="server",
                     alert_type=alert_type,
                     message=msg,
-                    server_name=server['name'],
+                    server_name=server_name,
                     metadata={"memory_usage": usage, "state": state},
                 )
 
-        # 4) Storage (Updated to have Warning & Critical)
-        for storage in server.get('storage', []):
-            # Check strictly for root or main mountpoints
-            if storage['mountpoint'] in ('/', '/root'):
-                usage = storage.get('percent', 0)
+        # ── 5) Storage ────────────────────────────────────────────
+        for storage in server.get("storage", []):
+            if storage["mountpoint"] in ("/", "/root"):
+                usage = round(storage.get("percent", 0), 2)
                 state = None
                 alert_type = None
 
@@ -1260,66 +1396,71 @@ def alerts():
                     alert_type = "warning"
 
                 if state:
-                    alerts.append({
-                        'server': server['name'],
-                        'type': 'Storage',
-                        'message': msg,
-                        'state': state,
-                    })
+                    alerts.append(
+                        {
+                            "server": server_name,
+                            "type": "Storage",
+                            "message": msg,
+                            "state": state,
+                        }
+                    )
                     server_has_alert = True
-
                     send_alert_to_socket(
                         category="server",
                         alert_type=alert_type,
                         message=msg,
-                        server_name=server['name'],
+                        server_name=server_name,
                         metadata={
-                            "mountpoint": storage['mountpoint'],
+                            "mountpoint": storage["mountpoint"],
                             "percent": usage,
-                            "state": state
+                            "state": state,
                         },
                     )
                     break
 
         if server_has_alert:
-            alert_servers.add(server['name'])
+            alert_servers.add(server_name)
 
-    return jsonify({
-        'alerts': alerts,
-        'total_servers': len(cache['servers']),
-        'alert_servers': len(alert_servers),
-    })
+    return jsonify(
+        {
+            "alerts": alerts,
+            "total_servers": len(cache["servers"]),
+            "alert_servers": len(alert_servers),
+        }
+    )
 
-@bp.route('/api/kick_ssh', methods=['POST'])
+
+@bp.route("/api/kick_ssh", methods=["POST"])
 def kick_ssh_user():
     data = request.get_json()
 
-    if not data or 'server' not in data or 'ip' not in data:
-        return jsonify({'success': False, 'error': 'Missing parameters'})
+    if not data or "server" not in data or "ip" not in data:
+        return jsonify({"success": False, "error": "Missing parameters"})
 
-    server = next((s for s in Config.SERVERS if s['name'] == data['server']), None)
+    server = next((s for s in Config.SERVERS if s["name"] == data["server"]), None)
 
     if not server:
-        return jsonify({'success': False, 'error': 'Server not found'})
+        return jsonify({"success": False, "error": "Server not found"})
 
     try:
         cmd = f"who | grep {data['ip']} | awk '{{print $2}}' | xargs -r pkill -9 -t"
         execute_ssh_command(server, cmd)
-        return jsonify({'success': True})
+        return jsonify({"success": True})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+        return jsonify({"success": False, "error": str(e)})
 
-@bp.route('/api/user_services', methods=['POST'])
+
+@bp.route("/api/user_services", methods=["POST"])
 def user_services():
     data = request.get_json()
 
-    if not data or 'server' not in data:
-        return jsonify({'success': False, 'error': 'Missing parameters'}), 400
+    if not data or "server" not in data:
+        return jsonify({"success": False, "error": "Missing parameters"}), 400
 
-    server = next((s for s in Config.SERVERS if s['name'] == data['server']), None)
+    server = next((s for s in Config.SERVERS if s["name"] == data["server"]), None)
 
     if not server:
-        return jsonify({'success': False, 'error': 'Server not found'}), 404
+        return jsonify({"success": False, "error": "Server not found"}), 404
 
     remote_cmd = """
     who | awk '{print $1, $2, $3, $4, $5}' | tr -d '()' | while read user tty date time ip; do ps -ft "$tty" | awk -v u="$user" -v i="$ip" -v d="$date" -v t="$time" 'NR>1 {printf "USER=%s IP=%s LOGIN=%s %s TTY=%s PID=%s CMD=%s\n", u, i, d, t, $2, $1, substr($0, index($0,$8))}'; done
@@ -1332,67 +1473,79 @@ def user_services():
         for line in output.splitlines():
             parts = line.split()
             try:
-                user = parts[0].split('=')[1]
-                ip = parts[1].split('=')[1]
-                login_date = parts[2].split('=')[1]
+                user = parts[0].split("=")[1]
+                ip = parts[1].split("=")[1]
+                login_date = parts[2].split("=")[1]
                 login_time = parts[3]
-                tty = parts[4].split('=')[1]
-                pid = parts[5].split('=')[1]
-                cmd = ' '.join(parts[6:])[4:]
+                tty = parts[4].split("=")[1]
+                pid = parts[5].split("=")[1]
+                cmd = " ".join(parts[6:])[4:]
 
-                process_list.append({
-                    "user": user,
-                    "ip": ip,
-                    "login_date": login_date,
-                    "login_time": login_time,
-                    "tty": tty,
-                    "pid": pid,
-                    "cmd": cmd
-                })
+                process_list.append(
+                    {
+                        "user": user,
+                        "ip": ip,
+                        "login_date": login_date,
+                        "login_time": login_time,
+                        "tty": tty,
+                        "pid": pid,
+                        "cmd": cmd,
+                    }
+                )
             except:
                 continue
 
     return jsonify({"success": True, "processes": process_list})
 
+
 # Create directories
 os.makedirs(DETAILED_HISTORY_DIR, exist_ok=True)
+
 
 def execute_ssh_command(server, command, timeout=10):
     """Execute SSH command using subprocess"""
     ssh_command = [
-        'sshpass', '-p', server['password'],
-        'ssh', '-o', 'StrictHostKeyChecking=no',
-        '-o', 'ConnectTimeout=5',
+        "sshpass",
+        "-p",
+        server["password"],
+        "ssh",
+        "-o",
+        "StrictHostKeyChecking=no",
+        "-o",
+        "ConnectTimeout=5",
         f"{server['username']}@{server['ip']}",
-        command
+        command,
     ]
 
     try:
-        result = subprocess.run(ssh_command, capture_output=True, text=True, timeout=timeout)
+        result = subprocess.run(
+            ssh_command, capture_output=True, text=True, timeout=timeout
+        )
         if result.returncode == 0:
             return result.stdout.strip()
         return None
     except:
         return None
 
+
 def track_ssh_users(server, ssh_connections):
     """Track SSH user sessions with accurate per-session timestamps"""
     tracking_data = load_user_tracking()
     current_time = datetime.now()
-    config_ips = [s['ip'] for s in Config.SERVERS]
+    config_ips = [s["ip"] for s in Config.SERVERS]
 
     if not ssh_connections:
         # No connections - mark active sessions as logged out for this server
         for session_key, session_info in tracking_data.items():
-            if session_info['server_name'] == server['name']:
-                if session_info['session_history']:
-                    last_session = session_info['session_history'][-1]
-                    if last_session['logout_time'] is None:
-                        last_session['logout_time'] = current_time.isoformat()
+            if session_info["server_name"] == server["name"]:
+                if session_info["session_history"]:
+                    last_session = session_info["session_history"][-1]
+                    if last_session["logout_time"] is None:
+                        last_session["logout_time"] = current_time.isoformat()
 
-                        login_time = datetime.fromisoformat(last_session['login_time'])
+                        login_time = datetime.fromisoformat(last_session["login_time"])
                         duration_seconds = (current_time - login_time).total_seconds()
-                        last_session['duration'] = round(duration_seconds, 2)
+                        last_session["duration"] = round(duration_seconds, 2)
 
         save_user_tracking(tracking_data)
         return
@@ -1402,30 +1555,30 @@ def track_ssh_users(server, ssh_connections):
     active_users = {}
 
     for conn in ssh_connections:
-        user_ip = conn['ip']
+        user_ip = conn["ip"]
         if user_ip not in config_ips:
             active_ips_on_server.add(user_ip)
-            active_users[user_ip] = conn['user']
+            active_users[user_ip] = conn["user"]
 
     # Check existing sessions and mark logged out if not in active list
     for session_key, session_info in list(tracking_data.items()):
-        if session_info['server_name'] == server['name']:
-            user_ip = session_info['user_ip']
+        if session_info["server_name"] == server["name"]:
+            user_ip = session_info["user_ip"]
 
             if user_ip not in active_ips_on_server:
-                if session_info['session_history']:
-                    last_session = session_info['session_history'][-1]
-                    if last_session['logout_time'] is None:
-                        last_session['logout_time'] = current_time.isoformat()
+                if session_info["session_history"]:
+                    last_session = session_info["session_history"][-1]
+                    if last_session["logout_time"] is None:
+                        last_session["logout_time"] = current_time.isoformat()
 
-                        login_time = datetime.fromisoformat(last_session['login_time'])
+                        login_time = datetime.fromisoformat(last_session["login_time"])
                         duration_seconds = (current_time - login_time).total_seconds()
-                        last_session['duration'] = round(duration_seconds, 2)
+                        last_session["duration"] = round(duration_seconds, 2)
 
     # Process active connections
     for conn in ssh_connections:
-        user_ip = conn['ip']
-        user_name = conn['user']
+        user_ip = conn["ip"]
+        user_name = conn["user"]
 
         if user_ip in config_ips:
             continue
@@ -1435,52 +1588,57 @@ def track_ssh_users(server, ssh_connections):
         if session_key not in tracking_data:
             # Brand new session for this user on this server
             tracking_data[session_key] = {
-                'user_ip': user_ip,
-                'user_name': user_name,
-                'server_name': server['name'],
-                'server_ip': server['ip'],
-                'first_seen': current_time.isoformat(),
-                'last_seen': current_time.isoformat(),
-                'total_sessions': 1,
-                'session_history': [{
-                    'login_time': current_time.isoformat(),
-                    'logout_time': None,
-                    'duration': None,
-                    'last_updated': current_time.isoformat()
-                }]
+                "user_ip": user_ip,
+                "user_name": user_name,
+                "server_name": server["name"],
+                "server_ip": server["ip"],
+                "first_seen": current_time.isoformat(),
+                "last_seen": current_time.isoformat(),
+                "total_sessions": 1,
+                "session_history": [
+                    {
+                        "login_time": current_time.isoformat(),
+                        "logout_time": None,
+                        "duration": None,
+                        "last_updated": current_time.isoformat(),
+                    }
+                ],
             }
         else:
             # Existing session - update last_seen
-            tracking_data[session_key]['last_seen'] = current_time.isoformat()
-            tracking_data[session_key]['user_name'] = user_name
+            tracking_data[session_key]["last_seen"] = current_time.isoformat()
+            tracking_data[session_key]["user_name"] = user_name
 
-            if tracking_data[session_key]['session_history']:
-                last_session = tracking_data[session_key]['session_history'][-1]
+            if tracking_data[session_key]["session_history"]:
+                last_session = tracking_data[session_key]["session_history"][-1]
 
                 # If last session was closed, start new one
-                if last_session['logout_time'] is not None:
+                if last_session["logout_time"] is not None:
                     # New session started
-                    tracking_data[session_key]['total_sessions'] += 1
-                    tracking_data[session_key]['session_history'].append({
-                        'login_time': current_time.isoformat(),
-                        'logout_time': None,
-                        'duration': None,
-                        'last_updated': current_time.isoformat()
-                    })
+                    tracking_data[session_key]["total_sessions"] += 1
+                    tracking_data[session_key]["session_history"].append(
+                        {
+                            "login_time": current_time.isoformat(),
+                            "logout_time": None,
+                            "duration": None,
+                            "last_updated": current_time.isoformat(),
+                        }
+                    )
                 else:
                     # Update existing active session
-                    last_session['last_updated'] = current_time.isoformat()
+                    last_session["last_updated"] = current_time.isoformat()
 
     save_user_tracking(tracking_data)
 
+
 def save_detailed_history(server_data):
     """Save detailed server history by date"""
-    today = datetime.now().strftime('%Y-%m-%d')
-    history_file = os.path.join(DETAILED_HISTORY_DIR, f'{today}.json')
+    today = datetime.now().strftime("%Y-%m-%d")
+    history_file = os.path.join(DETAILED_HISTORY_DIR, f"{today}.json")
 
     history = []
     if os.path.exists(history_file):
-        with open(history_file, 'r') as f:
+        with open(history_file, "r") as f:
             try:
                 history = json.load(f)
             except:
@@ -1491,51 +1649,51 @@ def save_detailed_history(server_data):
     for s in server_data:
         memory_percent = None
 
-        if s.get('memory'):
-            mem = s['memory']
-            if isinstance(mem, dict) and 'usage_percent' in mem:
-                memory_percent = mem['usage_percent']
-            elif isinstance(mem, dict) and 'actual_used' in mem and 'total' in mem:
-                total = mem.get('total', 0)
-                actual_used = mem.get('actual_used', 0)
+        if s.get("memory"):
+            mem = s["memory"]
+            if isinstance(mem, dict) and "usage_percent" in mem:
+                memory_percent = mem["usage_percent"]
+            elif isinstance(mem, dict) and "actual_used" in mem and "total" in mem:
+                total = mem.get("total", 0)
+                actual_used = mem.get("actual_used", 0)
                 if total > 0:
                     memory_percent = round((actual_used / total) * 100, 1)
 
-        server_metrics.append({
-            'name': s['name'],
-            'cpu': s.get('cpu'),
-            'memory_percent': memory_percent,
-            'status': s['status']
-        })
+        server_metrics.append(
+            {
+                "name": s["name"],
+                "cpu": s.get("cpu"),
+                "memory_percent": memory_percent,
+                "status": s["status"],
+            }
+        )
 
-    history.append({
-        'timestamp': datetime.now().isoformat(),
-        'servers': server_metrics
-    })
+    history.append({"timestamp": datetime.now().isoformat(), "servers": server_metrics})
 
     # Keep only last 288 entries (24 hours at 5-minute intervals)
     if len(history) > 288:
         history = history[-288:]
 
-    with open(history_file, 'w') as f:
+    with open(history_file, "w") as f:
         json.dump(history, f, indent=2)
-
 
 
 def load_user_tracking():
     """Load user tracking data"""
     if os.path.exists(USER_TRACKING_FILE):
-        with open(USER_TRACKING_FILE, 'r') as f:
+        with open(USER_TRACKING_FILE, "r") as f:
             try:
                 return json.load(f)
             except:
                 return {}
     return {}
 
+
 def save_user_tracking(data):
     """Save user tracking data"""
-    with open(USER_TRACKING_FILE, 'w') as f:
+    with open(USER_TRACKING_FILE, "w") as f:
         json.dump(data, f, indent=2)
+
 
 # @bp.route('/api/user_tracking')
 # def get_user_tracking():
@@ -1586,147 +1744,152 @@ def save_user_tracking(data):
 
 #     return jsonify({'users': formatted_data})
 
-@bp.route('/api/user_tracking')
+
+@bp.route("/api/user_tracking")
 def get_user_tracking():
     tracking_data = load_user_tracking()
     users_by_ip = defaultdict(list)
-    
+
     # ✅ Get all server IPs from config to exclude
-    server_ips = {server['ip'] for server in Config.SERVERS}
-    
+    server_ips = {server["ip"] for server in Config.SERVERS}
+
     for session_key, session_data in tracking_data.items():
-        user_ip = session_data['user_ip']
-        
+        user_ip = session_data["user_ip"]
+
         # ✅ Skip if user_ip is a server IP (server-to-server connection)
         if user_ip in server_ips:
             continue
-        
+
         # ✅ Skip if user_ip looks like a display (starts with :)
-        if user_ip.startswith(':'):
+        if user_ip.startswith(":"):
             continue
-        
+
         users_by_ip[user_ip].append(session_data)
-    
+
     formatted_data = []
     current_time = datetime.now()
-    
+
     for user_ip, sessions in users_by_ip.items():
         user_total_time_seconds = 0
         servers = []
-        
+
         for session in sessions:
             # ✅ SIMPLE: Calculate duration from first_seen to last_seen
             try:
-                first_seen = datetime.fromisoformat(session['first_seen'])
-                last_seen = datetime.fromisoformat(session['last_seen'])
-                
+                first_seen = datetime.fromisoformat(session["first_seen"])
+                last_seen = datetime.fromisoformat(session["last_seen"])
+
                 # Calculate total duration for this server
                 server_time_seconds = (last_seen - first_seen).total_seconds()
-                
+
                 # Check if currently active (last_seen within 5 minutes)
                 time_since_last_seen = (current_time - last_seen).total_seconds() / 60
                 is_active = time_since_last_seen <= 5
-                
+
             except Exception as e:
-                print(f"Error calculating duration for {user_ip} on {session['server_name']}: {e}")
+                print(
+                    f"Error calculating duration for {user_ip} on {session['server_name']}: {e}"
+                )
                 server_time_seconds = 0
                 is_active = False
-            
+
             user_total_time_seconds += server_time_seconds
-            
-            servers.append({
-                'server_name': session['server_name'],
-                'server_ip': session['server_ip'],
-                'first_seen': session['first_seen'],
-                'last_seen': session['last_seen'],
-                'session_count': session['total_sessions'],
-                'time_spent_seconds': round(server_time_seconds, 2),
-                'time_spent_minutes': round(server_time_seconds / 60, 2),
-                'time_spent_hours': round(server_time_seconds / 3600, 2),
-                'is_active': is_active
-            })
-        
-        formatted_data.append({
-            'user_ip': user_ip,
-            'username': sessions[0]['user_name'],
-            'servers': servers,
-            'total_servers': len(servers),
-            'total_time_seconds': round(user_total_time_seconds, 2),
-            'total_time_hours': round(user_total_time_seconds / 3600, 2)
-        })
-    
-    return jsonify({'users': formatted_data})
 
+            servers.append(
+                {
+                    "server_name": session["server_name"],
+                    "server_ip": session["server_ip"],
+                    "first_seen": session["first_seen"],
+                    "last_seen": session["last_seen"],
+                    "session_count": session["total_sessions"],
+                    "time_spent_seconds": round(server_time_seconds, 2),
+                    "time_spent_minutes": round(server_time_seconds / 60, 2),
+                    "time_spent_hours": round(server_time_seconds / 3600, 2),
+                    "is_active": is_active,
+                }
+            )
 
+        formatted_data.append(
+            {
+                "user_ip": user_ip,
+                "username": sessions[0]["user_name"],
+                "servers": servers,
+                "total_servers": len(servers),
+                "total_time_seconds": round(user_total_time_seconds, 2),
+                "total_time_hours": round(user_total_time_seconds / 3600, 2),
+            }
+        )
 
-
+    return jsonify({"users": formatted_data})
 
 
 def collect_ssh_sessions(server_config):
     """Collect SSH sessions with ACTUAL login times from 'who' command"""
     try:
         print(f"🔍 Collecting sessions from {server_config['name']}")
-        
+
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         ssh.connect(
-            hostname=server_config['ip'],
-            username=server_config['username'],
-            password=server_config['password'],
-            timeout=10
+            hostname=server_config["ip"],
+            username=server_config["username"],
+            password=server_config["password"],
+            timeout=10,
         )
-        
-        stdin, stdout, stderr = ssh.exec_command('who')
-        who_output = stdout.read().decode('utf-8')
+
+        stdin, stdout, stderr = ssh.exec_command("who")
+        who_output = stdout.read().decode("utf-8")
         ssh.close()
-        
+
         print(f"📋 WHO output for {server_config['name']}:")
         print(who_output)
-        
+
         sessions = []
-        for line in who_output.strip().split('\n'):
+        for line in who_output.strip().split("\n"):
             if not line.strip():
                 continue
-            
+
             parts = line.split()
             print(f"   Parts: {parts} (length: {len(parts)})")
-            
+
             if len(parts) < 5:
                 print(f"   ⚠️ Skipping line (less than 5 parts): {line}")
                 continue
-            
+
             user = parts[0]
             terminal = parts[1]
             date_str = parts[2]
             time_str = parts[3]
             ip_with_parens = parts[4]
-            
+
             try:
                 login_datetime_str = f"{date_str} {time_str}"
-                login_datetime = datetime.strptime(login_datetime_str, '%Y-%m-%d %H:%M')
-                from_ip = ip_with_parens.strip('()')
-                
-                print(f"   ✅ Parsed: {user} @ {from_ip}, login: {login_datetime.isoformat()}")
-                
-                sessions.append({
-                    'user': user,
-                    'terminal': terminal,
-                    'login_time': login_datetime.isoformat(),
-                    'from': from_ip
-                })
-                
+                login_datetime = datetime.strptime(login_datetime_str, "%Y-%m-%d %H:%M")
+                from_ip = ip_with_parens.strip("()")
+
+                print(
+                    f"   ✅ Parsed: {user} @ {from_ip}, login: {login_datetime.isoformat()}"
+                )
+
+                sessions.append(
+                    {
+                        "user": user,
+                        "terminal": terminal,
+                        "login_time": login_datetime.isoformat(),
+                        "from": from_ip,
+                    }
+                )
+
             except Exception as e:
                 print(f"   ❌ Error parsing: {e}")
                 continue
-        
+
         print(f"✅ Collected {len(sessions)} sessions from {server_config['name']}")
         return sessions
-        
+
     except Exception as e:
         print(f"❌ Error collecting from {server_config['name']}: {e}")
         return []
-
-
 
 
 def get_server_current_time(server_name, server_ip):
@@ -1736,138 +1899,143 @@ def get_server_current_time(server_name, server_ip):
         server_config = None
         for group_servers in Config.SERVER_GROUPS.values():
             for srv in group_servers:
-                if srv['name'] == server_name or srv['ip'] == server_ip:
+                if srv["name"] == server_name or srv["ip"] == server_ip:
                     server_config = srv
                     break
             if server_config:
                 break
-        
+
         if not server_config:
             print(f"Server config not found for {server_name}")
             return datetime.now()
-        
+
         # SSH to server and get current time
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         ssh.connect(
-            hostname=server_config['ip'],
-            username=server_config['username'],
-            password=server_config['password'],
-            timeout=5
+            hostname=server_config["ip"],
+            username=server_config["username"],
+            password=server_config["password"],
+            timeout=5,
         )
-        
+
         # Get server's current time
         stdin, stdout, stderr = ssh.exec_command('date "+%Y-%m-%d %H:%M:%S"')
         time_str = stdout.read().decode().strip()
         ssh.close()
-        
+
         # Parse the time
-        server_time = datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S')
+        server_time = datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S")
         return server_time
-        
+
     except Exception as e:
         print(f"Error getting server time for {server_name}: {e}")
         # Fallback to current time
         return datetime.now()
 
 
-@bp.route('/api/debug/tracking')
+@bp.route("/api/debug/tracking")
 def debug_tracking():
     tracking_data = load_user_tracking()
-    return jsonify({
-        'tracking_data': tracking_data,
-        'total_entries': len(tracking_data)
-    })
+    return jsonify(
+        {"tracking_data": tracking_data, "total_entries": len(tracking_data)}
+    )
 
 
 def update_user_tracking(server_name, server_ip, ssh_sessions):
     """Update user tracking with ACTUAL login times"""
     tracking_data = load_user_tracking()
     current_time = datetime.now().isoformat()
-    
+
     # Track which sessions are currently active
     active_keys = set()
-    
+
     for session in ssh_sessions:
-        user_name = session['user']
-        user_ip = session['from']
-        terminal = session['terminal']
-        login_time = session['login_time']  # ✅ Use actual login time from 'who'
-        
+        user_name = session["user"]
+        user_ip = session["from"]
+        terminal = session["terminal"]
+        login_time = session["login_time"]  # ✅ Use actual login time from 'who'
+
         # Create unique session key (per user IP and server)
         session_key = f"{user_ip}_{server_name}"
         active_keys.add(session_key)
-        
+
         if session_key in tracking_data:
             # 🔥 UPDATE EXISTING SESSION
-            tracking_data[session_key]['last_seen'] = current_time
-            
+            tracking_data[session_key]["last_seen"] = current_time
+
             # Check if this terminal already exists in session history
-            session_history = tracking_data[session_key].get('session_history', [])
+            session_history = tracking_data[session_key].get("session_history", [])
             terminal_found = False
-            
+
             for hist in session_history:
                 # If same terminal and login time, just update timestamp
-                if (hist.get('terminal') == terminal and 
-                    hist.get('login_time') == login_time and
-                    hist.get('logout_time') is None):
-                    hist['last_updated'] = current_time
+                if (
+                    hist.get("terminal") == terminal
+                    and hist.get("login_time") == login_time
+                    and hist.get("logout_time") is None
+                ):
+                    hist["last_updated"] = current_time
                     terminal_found = True
                     break
-            
+
             # If this is a new terminal/session, add it
             if not terminal_found:
-                session_history.append({
-                    'login_time': login_time,  # ✅ Actual login time
-                    'logout_time': None,
-                    'duration': None,
-                    'terminal': terminal,
-                    'last_updated': current_time
-                })
-                tracking_data[session_key]['total_sessions'] += 1
-            
-            tracking_data[session_key]['session_history'] = session_history
-            
+                session_history.append(
+                    {
+                        "login_time": login_time,  # ✅ Actual login time
+                        "logout_time": None,
+                        "duration": None,
+                        "terminal": terminal,
+                        "last_updated": current_time,
+                    }
+                )
+                tracking_data[session_key]["total_sessions"] += 1
+
+            tracking_data[session_key]["session_history"] = session_history
+
         else:
             # 🔥 NEW SESSION
             tracking_data[session_key] = {
-                'user_name': user_name,
-                'user_ip': user_ip,
-                'server_name': server_name,
-                'server_ip': server_ip,
-                'first_seen': login_time,  # ✅ Use actual login time as first_seen
-                'last_seen': current_time,
-                'total_sessions': 1,
-                'session_history': [{
-                    'login_time': login_time,  # ✅ Actual login time
-                    'logout_time': None,
-                    'duration': None,
-                    'terminal': terminal,
-                    'last_updated': current_time
-                }]
+                "user_name": user_name,
+                "user_ip": user_ip,
+                "server_name": server_name,
+                "server_ip": server_ip,
+                "first_seen": login_time,  # ✅ Use actual login time as first_seen
+                "last_seen": current_time,
+                "total_sessions": 1,
+                "session_history": [
+                    {
+                        "login_time": login_time,  # ✅ Actual login time
+                        "logout_time": None,
+                        "duration": None,
+                        "terminal": terminal,
+                        "last_updated": current_time,
+                    }
+                ],
             }
-    
+
     # 🔥 Mark sessions that are no longer active
     for session_key, session_data in tracking_data.items():
-        if session_data['server_ip'] == server_ip:
+        if session_data["server_ip"] == server_ip:
             if session_key not in active_keys:
                 # Session ended - mark all active sessions as ended
-                for hist in session_data.get('session_history', []):
-                    if hist.get('logout_time') is None:
-                        hist['logout_time'] = current_time
-                        
+                for hist in session_data.get("session_history", []):
+                    if hist.get("logout_time") is None:
+                        hist["logout_time"] = current_time
+
                         # Calculate duration
                         try:
-                            login = datetime.fromisoformat(hist['login_time'])
+                            login = datetime.fromisoformat(hist["login_time"])
                             logout = datetime.fromisoformat(current_time)
-                            hist['duration'] = (logout - login).total_seconds()
+                            hist["duration"] = (logout - login).total_seconds()
                         except:
                             pass
-    
+
     save_user_tracking(tracking_data)
 
 
-@bp.route('/api/test/who/<server_name>')
+@bp.route("/api/test/who/<server_name>")
 def test_who_parsing(server_name):
     """Test who command parsing for a specific server"""
     try:
@@ -1875,50 +2043,50 @@ def test_who_parsing(server_name):
         server_config = None
         for group_servers in Config.SERVER_GROUPS.values():
             for srv in group_servers:
-                if srv['name'] == server_name:
+                if srv["name"] == server_name:
                     server_config = srv
                     break
             if server_config:
                 break
-        
+
         if not server_config:
-            return jsonify({'error': f'Server {server_name} not found'}), 404
-        
+            return jsonify({"error": f"Server {server_name} not found"}), 404
+
         # Connect and get who output
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         ssh.connect(
-            hostname=server_config['ip'],
-            username=server_config['username'],
-            password=server_config['password'],
-            timeout=10
+            hostname=server_config["ip"],
+            username=server_config["username"],
+            password=server_config["password"],
+            timeout=10,
         )
-        
-        stdin, stdout, stderr = ssh.exec_command('who')
-        who_output = stdout.read().decode('utf-8')
+
+        stdin, stdout, stderr = ssh.exec_command("who")
+        who_output = stdout.read().decode("utf-8")
         ssh.close()
-        
+
         # Parse each line
         parsed_sessions = []
-        for line in who_output.strip().split('\n'):
+        for line in who_output.strip().split("\n"):
             if not line.strip():
                 continue
-            
+
             parts = line.split()
-            parsed_sessions.append({
-                'raw_line': line,
-                'parts': parts,
-                'part_count': len(parts)
-            })
-        
-        return jsonify({
-            'server': server_name,
-            'raw_output': who_output,
-            'parsed_sessions': parsed_sessions
-        })
-        
+            parsed_sessions.append(
+                {"raw_line": line, "parts": parts, "part_count": len(parts)}
+            )
+
+        return jsonify(
+            {
+                "server": server_name,
+                "raw_output": who_output,
+                "parsed_sessions": parsed_sessions,
+            }
+        )
+
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
 
 def collect_server_data():
@@ -1930,41 +2098,39 @@ def collect_server_data():
                     # OLD CODE - REMOVE THIS
                     # ssh_connections = get_ssh_connections(server)
                     # track_ssh_users(server, ssh_connections)
-                    
+
                     # ✅ NEW CODE - ADD THIS
                     sessions = collect_ssh_sessions(server)
-                    update_user_tracking(server['name'], server['ip'], sessions)
-                    
+                    update_user_tracking(server["name"], server["ip"], sessions)
+
                 except Exception as e:
                     print(f"Error processing server {server['name']}: {e}")
-            
+
             time.sleep(30)
-            
+
         except Exception as e:
             print(f"Error in collection loop: {e}")
             time.sleep(30)
 
 
-
-
 def get_ssh_sessions(ssh_client):
     """Get SSH sessions with ACTUAL login times from 'who' command"""
     try:
-        stdin, stdout, stderr = ssh_client.exec_command('who')
-        who_output = stdout.read().decode('utf-8')
-        
+        stdin, stdout, stderr = ssh_client.exec_command("who")
+        who_output = stdout.read().decode("utf-8")
+
         sessions = []
-        for line in who_output.strip().split('\n'):
+        for line in who_output.strip().split("\n"):
             if not line.strip():
                 continue
-            
+
             parts = line.split()
             if len(parts) < 5:
                 continue
-            
+
             user = parts[0]
             terminal = parts[1]
-            
+
             # Parse login date and time
             # Format: "2026-02-10 11:56"
             try:
@@ -1973,54 +2139,53 @@ def get_ssh_sessions(ssh_client):
                 date_part = parts[2]  # "2026-02-10"
                 time_part = parts[3]  # "11:56"
                 login_time_str = f"{date_part} {time_part}"
-                
+
                 # Parse the IP from parentheses
-                ip_match = line.split('(')
+                ip_match = line.split("(")
                 if len(ip_match) > 1:
-                    from_ip = ip_match[1].rstrip(')')
+                    from_ip = ip_match[1].rstrip(")")
                 else:
                     from_ip = terminal  # Fallback to terminal if no IP
-                
-                sessions.append({
-                    'user': user,
-                    'terminal': terminal,
-                    'login_time': login_time_str,  # ✅ Actual login time
-                    'from': from_ip
-                })
+
+                sessions.append(
+                    {
+                        "user": user,
+                        "terminal": terminal,
+                        "login_time": login_time_str,  # ✅ Actual login time
+                        "from": from_ip,
+                    }
+                )
             except Exception as e:
                 print(f"Error parsing who line: {line}, Error: {e}")
                 continue
-        
+
         return sessions
-        
+
     except Exception as e:
         print(f"Error getting SSH sessions: {e}")
         return []
 
 
-
-@bp.route('/api/analyze_storage', methods=['POST'])
+@bp.route("/api/analyze_storage", methods=["POST"])
 def analyze_storage():
     """EXTREMELY optimized storage analysis."""
     data = request.get_json()
 
-    if not data or 'server' not in data or 'mountpoint' not in data:
-        return jsonify({'success': False, 'error': 'Missing parameters'}), 400
+    if not data or "server" not in data or "mountpoint" not in data:
+        return jsonify({"success": False, "error": "Missing parameters"}), 400
 
-    server = next((s for s in Config.SERVERS if s['name'] == data['server']), None)
+    server = next((s for s in Config.SERVERS if s["name"] == data["server"]), None)
 
     if not server:
-        return jsonify({'success': False, 'error': 'Server not found'}), 404
+        return jsonify({"success": False, "error": "Server not found"}), 404
 
-    mountpoint = data['mountpoint']
+    mountpoint = data["mountpoint"]
 
     try:
         # ------------------------------------------------------------------
         # 1) GET TOP FILES + FILE TYPE COUNTS (SINGLE SCAN, NO DU)
         # ------------------------------------------------------------------
-        cmd_find = (
-            f"find {mountpoint} -type f -printf \"%s %p\\n\" 2>/dev/null"
-        )
+        cmd_find = f'find {mountpoint} -type f -printf "%s %p\\n" 2>/dev/null'
         find_output = execute_ssh_command(server, cmd_find, timeout=40)
 
         top_files = []
@@ -2049,23 +2214,19 @@ def analyze_storage():
 
         # final top 20
         top_files.sort(reverse=True)
-        top_files = [
-            {"size": format_size(s), "path": p} for s, p in top_files[:20]
-        ]
+        top_files = [{"size": format_size(s), "path": p} for s, p in top_files[:20]]
 
         # final file types (top 10)
         filetypes = sorted(
             [{"extension": k, "count": v} for k, v in filetype_counts.items()],
             key=lambda x: x["count"],
-            reverse=True
+            reverse=True,
         )[:10]
 
         # ------------------------------------------------------------------
         # 2) DIRECTORY SUMMARY (VERY FAST)
         # ------------------------------------------------------------------
-        cmd_summary = (
-            f"du -B1 --max-depth=1 {mountpoint} 2>/dev/null | sort -rn"
-        )
+        cmd_summary = f"du -B1 --max-depth=1 {mountpoint} 2>/dev/null | sort -rn"
         summary_output = execute_ssh_command(server, cmd_summary, timeout=30)
 
         dir_summary = []
@@ -2075,73 +2236,73 @@ def analyze_storage():
                 if len(parts) == 2:
                     size = int(parts[0])
                     path = parts[1]
-                    dir_summary.append({
-                        "size": format_size(size),
-                        "path": path
-                    })
+                    dir_summary.append({"size": format_size(size), "path": path})
 
-        return jsonify({
-            "success": True,
-            "server": data['server'],
-            "mountpoint": mountpoint,
-            "analysis": {
-                "top_directories": dir_summary[:20],  # best dirs
-                "top_files": top_files,
-                "file_types": filetypes,
-                "directory_summary": dir_summary
+        return jsonify(
+            {
+                "success": True,
+                "server": data["server"],
+                "mountpoint": mountpoint,
+                "analysis": {
+                    "top_directories": dir_summary[:20],  # best dirs
+                    "top_files": top_files,
+                    "file_types": filetypes,
+                    "directory_summary": dir_summary,
+                },
             }
-        })
+        )
 
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 def format_size(bytes_value):
     """Convert bytes to human readable."""
-    for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+    for unit in ["B", "KB", "MB", "GB", "TB"]:
         if bytes_value < 1024:
             return f"{bytes_value:.2f}{unit}"
         bytes_value /= 1024
     return f"{bytes_value:.2f}PB"
 
 
-@bp.route('/api/history/<date>')
+@bp.route("/api/history/<date>")
 def get_history_by_date(date):
     """Get server history for specific date"""
-    history_file = os.path.join(DETAILED_HISTORY_DIR, f'{date}.json')
+    history_file = os.path.join(DETAILED_HISTORY_DIR, f"{date}.json")
 
     if os.path.exists(history_file):
-        with open(history_file, 'r') as f:
+        with open(history_file, "r") as f:
             try:
                 return jsonify(json.load(f))
             except:
                 return jsonify([])
     return jsonify([])
 
-@bp.route('/api/analytics_range')
+
+@bp.route("/api/analytics_range")
 def get_analytics_range():
     """Get analytics data for date range"""
-    start_date = request.args.get('start')
-    end_date = request.args.get('end')
+    start_date = request.args.get("start")
+    end_date = request.args.get("end")
 
     if not start_date or not end_date:
-        return jsonify({'error': 'Missing date parameters'}), 400
+        return jsonify({"error": "Missing date parameters"}), 400
 
     try:
         start = datetime.fromisoformat(start_date)
         end = datetime.fromisoformat(end_date)
     except:
-        return jsonify({'error': 'Invalid date format'}), 400
+        return jsonify({"error": "Invalid date format"}), 400
 
     all_data = []
     current_date = start
 
     while current_date <= end:
-        date_str = current_date.strftime('%Y-%m-%d')
-        history_file = os.path.join(DETAILED_HISTORY_DIR, f'{date_str}.json')
+        date_str = current_date.strftime("%Y-%m-%d")
+        history_file = os.path.join(DETAILED_HISTORY_DIR, f"{date_str}.json")
 
         if os.path.exists(history_file):
-            with open(history_file, 'r') as f:
+            with open(history_file, "r") as f:
                 try:
                     day_data = json.load(f)
                     all_data.extend(day_data)
@@ -2153,8 +2314,7 @@ def get_analytics_range():
     return jsonify(all_data)
 
 
-
-@bp.route('/api/server_crash_analysis', methods=['POST'])
+@bp.route("/api/server_crash_analysis", methods=["POST"])
 def get_server_crash_analysis():
     """
     Analyze why a server crashed by checking:
@@ -2165,89 +2325,96 @@ def get_server_crash_analysis():
     """
     try:
         data = request.get_json()
-        server_name = data.get('server')
+        server_name = data.get("server")
 
         # Find server config
         server_config = None
-        for server in config['servers']:
-            if server['name'] == server_name:
+        for server in config["servers"]:
+            if server["name"] == server_name:
                 server_config = server
                 break
 
         if not server_config:
-            return jsonify({'success': False, 'error': 'Server not found'}), 404
+            return jsonify({"success": False, "error": "Server not found"}), 404
 
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
         try:
             ssh.connect(
-                server_config['host'],
-                port=server_config.get('port', 22),
-                username=server_config['username'],
-                key_filename=server_config.get('key_file')
+                server_config["host"],
+                port=server_config.get("port", 22),
+                username=server_config["username"],
+                key_filename=server_config.get("key_file"),
             )
 
             analysis = {
-                'oom_kills': [],
-                'failed_services': [],
-                'kernel_errors': [],
-                'segfaults': []
+                "oom_kills": [],
+                "failed_services": [],
+                "kernel_errors": [],
+                "segfaults": [],
             }
 
             # Check for OOM killer
             cmd = "sudo journalctl -n 500 --no-pager | grep -i 'out of memory\|oom\|killed process'"
             stdin, stdout, stderr = ssh.exec_command(cmd)
-            oom_logs = stdout.read().decode('utf-8', errors='ignore').strip()
+            oom_logs = stdout.read().decode("utf-8", errors="ignore").strip()
             if oom_logs:
-                analysis['oom_kills'] = oom_logs.split('\n')
+                analysis["oom_kills"] = oom_logs.split("\n")
 
             # Check for failed services
             cmd = "sudo journalctl -n 500 --no-pager -p err | grep -i 'failed\|error'"
             stdin, stdout, stderr = ssh.exec_command(cmd)
-            failed_logs = stdout.read().decode('utf-8', errors='ignore').strip()
+            failed_logs = stdout.read().decode("utf-8", errors="ignore").strip()
             if failed_logs:
-                analysis['failed_services'] = failed_logs.split('\n')[:20]
+                analysis["failed_services"] = failed_logs.split("\n")[:20]
 
             # Check for kernel errors
             cmd = "sudo journalctl -n 500 --no-pager -k | grep -i 'panic\|bug\|error'"
             stdin, stdout, stderr = ssh.exec_command(cmd)
-            kernel_logs = stdout.read().decode('utf-8', errors='ignore').strip()
+            kernel_logs = stdout.read().decode("utf-8", errors="ignore").strip()
             if kernel_logs:
-                analysis['kernel_errors'] = kernel_logs.split('\n')[:20]
+                analysis["kernel_errors"] = kernel_logs.split("\n")[:20]
 
             # Check for segfaults
             cmd = "sudo journalctl -n 500 --no-pager | grep -i 'segfault\|segmentation fault'"
             stdin, stdout, stderr = ssh.exec_command(cmd)
-            segfault_logs = stdout.read().decode('utf-8', errors='ignore').strip()
+            segfault_logs = stdout.read().decode("utf-8", errors="ignore").strip()
             if segfault_logs:
-                analysis['segfaults'] = segfault_logs.split('\n')[:20]
+                analysis["segfaults"] = segfault_logs.split("\n")[:20]
 
             ssh.close()
 
             # Determine likely cause
             likely_cause = "Unknown"
-            if analysis['oom_kills']:
+            if analysis["oom_kills"]:
                 likely_cause = "Out of Memory (OOM Killer activated)"
-            elif analysis['kernel_errors']:
+            elif analysis["kernel_errors"]:
                 likely_cause = "Kernel Error or Panic"
-            elif analysis['segfaults']:
+            elif analysis["segfaults"]:
                 likely_cause = "Segmentation Fault"
-            elif analysis['failed_services']:
+            elif analysis["failed_services"]:
                 likely_cause = "Service Failures"
 
-            return jsonify({
-                'success': True,
-                'server': server_name,
-                'analysis': analysis,
-                'likely_cause': likely_cause
-            })
+            return jsonify(
+                {
+                    "success": True,
+                    "server": server_name,
+                    "analysis": analysis,
+                    "likely_cause": likely_cause,
+                }
+            )
 
         except Exception as ssh_error:
-            return jsonify({
-                'success': False,
-                'error': f'SSH connection failed: {str(ssh_error)}'
-            }), 500
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": f"SSH connection failed: {str(ssh_error)}",
+                    }
+                ),
+                500,
+            )
         finally:
             try:
                 ssh.close()
@@ -2255,32 +2422,74 @@ def get_server_crash_analysis():
                 pass
 
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
-@bp.route('/api/endpoints_info')
+@bp.route("/api/gpu_smi_live", methods=["POST"])
+def gpu_smi_live():
+    data = request.get_json(silent=True) or {}
+    server_name = (data.get("server") or "").strip()
+
+    if not server_name:
+        return jsonify({"success": False, "error": "Server is required"}), 400
+
+    server_obj = next((s for s in Config.SERVERS if s["name"] == server_name), None)
+
+    if not server_obj:
+        return (
+            jsonify({"success": False, "error": f"Server not found: {server_name}"}),
+            404,
+        )
+
+    try:
+        output = execute_ssh_command(server_obj, "nvidia-smi")
+
+        if not output:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": "nvidia-smi not available or server unreachable",
+                    }
+                ),
+                200,
+            )
+
+        return jsonify(
+            {
+                "success": True,
+                "server": server_name,
+                "output": output,
+                "timestamp": datetime.utcnow().isoformat() + "Z",
+            }
+        )
+
+    except Exception as e:
+        current_app.logger.exception("gpu_smi_live failed for %s", server_name)
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@bp.route("/api/endpoints_info")
 def get_endpoints_info():
     """Complete API documentation with working RUN and TEST buttons"""
     import json
     from config import Config
     from flask import request, jsonify
 
-    format_param = request.args.get('format', 'html')
-    base_url = 'http://192.168.2.137:8080/monitoring_server'
+    format_param = request.args.get("format", "html")
+    base_url = "http://192.168.2.137:8080/monitoring_server"
 
     # Get server list with groups
     servers_by_group = {}
     for server in Config.SERVERS:
-        group = server.get('group', 'default')
+        group = server.get("group", "default")
         if group not in servers_by_group:
             servers_by_group[group] = []
-        servers_by_group[group].append({
-            'name': server['name'],
-            'host': server['ip'],
-            'group': group
-        })
+        servers_by_group[group].append(
+            {"name": server["name"], "host": server["ip"], "group": group}
+        )
 
-    server_names = [server['name'] for server in Config.SERVERS]
+    server_names = [server["name"] for server in Config.SERVERS]
 
     endpoints_data = {
         "title": "Server Monitoring API",
@@ -2290,7 +2499,7 @@ def get_endpoints_info():
         "servers_by_group": servers_by_group,
         "total_servers": len(server_names),
         "version": "2.1",
-        "last_updated": datetime.now().strftime('%Y-%m-%d'),
+        "last_updated": datetime.now().strftime("%Y-%m-%d"),
         "endpoints": [
             {
                 "name": "Live Metrics (Real-time)",
@@ -2301,7 +2510,7 @@ def get_endpoints_info():
                 "params": {"servers": "optional (array of server names)"},
                 "description": "Get LIVE CPU, Memory, Storage at this exact moment (no cache). Parallel execution for multiple servers with sub-5s response time.",
                 "response_time": "2-5 seconds",
-                "testable": True
+                "testable": True,
             },
             {
                 "name": "Live Metrics (GET method)",
@@ -2312,7 +2521,7 @@ def get_endpoints_info():
                 "params": {"servers": "optional (multiple)"},
                 "description": "Same as POST version but via GET request for easier browser testing",
                 "response_time": "2-5 seconds",
-                "testable": True
+                "testable": True,
             },
             {
                 "name": "Server Status (Cached)",
@@ -2324,7 +2533,7 @@ def get_endpoints_info():
                 "description": "Get comprehensive server metrics from cache (updates every 30 seconds). Includes CPU, memory, storage, services, processes, and more.",
                 "response_time": "< 100ms",
                 "cache_duration": "30 seconds",
-                "testable": True
+                "testable": True,
             },
             {
                 "name": "Force Refresh Cache",
@@ -2335,7 +2544,7 @@ def get_endpoints_info():
                 "params": {},
                 "description": "Force immediate cache refresh for all servers. Use sparingly to avoid server load.",
                 "response_time": "5-15 seconds",
-                "testable": True
+                "testable": True,
             },
             {
                 "name": "Server Metrics History",
@@ -2345,12 +2554,31 @@ def get_endpoints_info():
                 "tags": ["history", "analytics", "trends"],
                 "params": {
                     "server": "required (server name)",
-                    "days": "optional (default: 7, max: 200)"
+                    "days": "optional (default: 7, max: 200)",
                 },
                 "description": "Time-series metrics for charting. When server enters WARNING/ALERT: includes services, failed services, and top processes for forensic analysis.",
                 "response_time": "< 1 second",
                 "data_retention": "200 days",
-                "testable": True
+                "testable": True,
+            },
+            # ✅ NEW — Memory Deep Report (placed right after Server Metrics History)
+            {
+                "name": "Memory Deep Report",
+                "url": "/api/memory_report",
+                "method": "GET",
+                "category": "Analytics",
+                "tags": ["memory", "diagnostics", "oom", "processes", "analytics"],
+                "params": {"server": "required (server name)"},
+                "description": (
+                    "Deep memory analysis report for a single server. "
+                    "Returns full breakdown (used / cached / buffers / slab / anonymous / dirty pages), "
+                    "top 20 processes by RSS, per-user memory usage, swap status, "
+                    "OOM killer events from dmesg/journalctl, kernel slab top consumers, "
+                    "auto root-cause analysis, and actionable recommendations. "
+                    "Use when memory is in WARNING/CRITICAL state to find the exact cause."
+                ),
+                "response_time": "3-8 seconds",
+                "testable": True,
             },
             {
                 "name": "Alert History",
@@ -2362,11 +2590,11 @@ def get_endpoints_info():
                     "server": "optional (filter by server)",
                     "type": "optional (cpu|memory|storage|offline)",
                     "severity": "optional (warning|critical)",
-                    "days": "optional (default: 7, max: 200)"
+                    "days": "optional (default: 7, max: 200)",
                 },
                 "description": "Historical alert timeline with advanced filtering. Includes alert summary statistics and trends.",
                 "response_time": "< 500ms",
-                "testable": True
+                "testable": True,
             },
             {
                 "name": "Current Alerts",
@@ -2377,7 +2605,7 @@ def get_endpoints_info():
                 "params": {},
                 "description": "Get current active alerts across all servers. Categorized by severity (critical/warning).",
                 "response_time": "< 100ms",
-                "testable": True
+                "testable": True,
             },
             {
                 "name": "Server Comparison",
@@ -2387,11 +2615,11 @@ def get_endpoints_info():
                 "tags": ["comparison", "analytics"],
                 "params": {
                     "servers": "required (multiple server names)",
-                    "days": "optional (default: 1, max: 30)"
+                    "days": "optional (default: 1, max: 30)",
                 },
                 "description": "Side-by-side metric comparison for analyzing performance patterns across multiple servers.",
                 "response_time": "< 1 second",
-                "testable": True
+                "testable": True,
             },
             {
                 "name": "Alert Trends",
@@ -2402,7 +2630,7 @@ def get_endpoints_info():
                 "params": {"days": "optional (default: 30, max: 90)"},
                 "description": "Daily alert statistics aggregated by type and severity for trend analysis.",
                 "response_time": "< 1 second",
-                "testable": True
+                "testable": True,
             },
             {
                 "name": "Server Health Score",
@@ -2413,7 +2641,7 @@ def get_endpoints_info():
                 "params": {"days": "optional (default: 7, max: 30)"},
                 "description": "Health score (0-100) calculation based on uptime, resource usage, and alert frequency. Higher is better.",
                 "response_time": "< 1 second",
-                "testable": True
+                "testable": True,
             },
             {
                 "name": "User Tracking",
@@ -2424,7 +2652,7 @@ def get_endpoints_info():
                 "params": {},
                 "description": "Track SSH user sessions across all servers. Shows active connections, login history, and user activity.",
                 "response_time": "< 200ms",
-                "testable": True
+                "testable": True,
             },
             {
                 "name": "Storage Analysis",
@@ -2434,11 +2662,11 @@ def get_endpoints_info():
                 "tags": ["storage", "analysis", "disk"],
                 "params": {
                     "server": "required (server name)",
-                    "mountpoint": "required (e.g., /)"
+                    "mountpoint": "required (e.g., /)",
                 },
                 "description": "Deep storage analysis: top files, directories, file types, and space usage patterns. Use for troubleshooting disk space issues.",
                 "response_time": "5-20 seconds",
-                "testable": True
+                "testable": True,
             },
             {
                 "name": "Server Logs",
@@ -2448,11 +2676,11 @@ def get_endpoints_info():
                 "tags": ["logs", "debugging", "journalctl"],
                 "params": {
                     "server": "required (server name)",
-                    "lines": "optional (default: 200, max: 1000)"
+                    "lines": "optional (default: 200, max: 1000)",
                 },
                 "description": "Fetch journalctl or syslog from server for debugging. Returns recent system logs.",
                 "response_time": "1-3 seconds",
-                "testable": True
+                "testable": True,
             },
             {
                 "name": "Current Time",
@@ -2463,16 +2691,16 @@ def get_endpoints_info():
                 "params": {},
                 "description": "Get current server time in UTC. Useful for time synchronization checks.",
                 "response_time": "< 50ms",
-                "testable": True
-            }
-        ]
+                "testable": True,
+            },
+        ],
     }
 
-    if format_param == 'json':
+    if format_param == "json":
         return jsonify(endpoints_data)
 
     # Generate complete HTML
-    html = '''<!DOCTYPE html>
+    html = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -2693,10 +2921,7 @@ def get_endpoints_info():
             color: white;
             font-size: 24px;
         }
-        .category-header h2 {
-            font-size: 26px;
-            font-weight: 700;
-        }
+        .category-header h2 { font-size: 26px; font-weight: 700; }
         .endpoints-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
@@ -2714,11 +2939,18 @@ def get_endpoints_info():
             box-shadow: 0 10px 30px -10px rgba(102, 126, 234, 0.3);
             transform: translateY(-4px);
         }
-        .endpoint-title {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 8px;
+
+        /* ✅ NEW: Highlight Memory Deep Report card */
+        .endpoint-card.memory-report {
+            border-color: #f59e0b;
+            background: linear-gradient(135deg, #fffbeb, #fff);
         }
+        .endpoint-card.memory-report:hover {
+            border-color: #d97706;
+            box-shadow: 0 10px 30px -10px rgba(245, 158, 11, 0.4);
+        }
+
+        .endpoint-title { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
         .method-badge {
             padding: 6px 14px;
             border-radius: 6px;
@@ -2742,6 +2974,12 @@ def get_endpoints_info():
             border-radius: 4px;
             font-size: 11px;
         }
+
+        /* ✅ NEW: Special tag style for memory/oom */
+        .tag.memory  { background: #fef3c7; color: #92400e; }
+        .tag.oom     { background: #fee2e2; color: #991b1b; }
+        .tag.diagnostics { background: #ede9fe; color: #5b21b6; }
+
         .endpoint-url {
             background: #1a202c;
             color: #48bb78;
@@ -2759,11 +2997,7 @@ def get_endpoints_info():
             padding: 15px;
             margin-top: 15px;
         }
-        .test-form h4 {
-            font-size: 14px;
-            color: #4f46e5;
-            margin-bottom: 12px;
-        }
+        .test-form h4 { font-size: 14px; color: #4f46e5; margin-bottom: 12px; }
         .form-group { margin-bottom: 12px; }
         .form-group label {
             display: block;
@@ -2808,10 +3042,8 @@ def get_endpoints_info():
         .modal {
             display: none;
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.7);
             z-index: 1000;
             padding: 20px;
@@ -2836,8 +3068,7 @@ def get_endpoints_info():
             background: rgba(255, 255, 255, 0.2);
             border: none;
             color: white;
-            width: 35px;
-            height: 35px;
+            width: 35px; height: 35px;
             border-radius: 50%;
             cursor: pointer;
             font-size: 20px;
@@ -2856,8 +3087,7 @@ def get_endpoints_info():
             border: 3px solid #f3f4f6;
             border-top: 3px solid #667eea;
             border-radius: 50%;
-            width: 16px;
-            height: 16px;
+            width: 16px; height: 16px;
             animation: spin 1s linear infinite;
             display: inline-block;
         }
@@ -2952,6 +3182,9 @@ def get_endpoints_info():
                     <button class="filter-btn" data-category="Metrics">Metrics</button>
                     <button class="filter-btn" data-category="Analytics">Analytics</button>
                     <button class="filter-btn" data-category="Alerts">Alerts</button>
+                    <button class="filter-btn" data-category="Users">Users</button>
+                    <button class="filter-btn" data-category="Storage">Storage</button>
+                    <button class="filter-btn" data-category="Logs">Logs</button>
                 </div>
             </div>
 
@@ -2975,16 +3208,24 @@ def get_endpoints_info():
 
                     <div class="endpoints-grid">
                         {% for ep in endpoints %}
-                        <div class="endpoint-card" data-ep-id="{{ loop.index0 }}" data-ep-url="{{ ep.url }}" data-ep-method="{{ ep.method }}">
+                        <div class="endpoint-card {% if ep.url == '/api/memory_report' %}memory-report{% endif %}"
+                             data-ep-id="{{ loop.index0 }}"
+                             data-ep-url="{{ ep.url }}"
+                             data-ep-method="{{ ep.method }}">
+
                             <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
-                                <div class="endpoint-title">{{ ep.name }}</div>
+                                <div class="endpoint-title">
+                                    {% if ep.url == '/api/memory_report' %}🧠 {% endif %}{{ ep.name }}
+                                </div>
                                 <span class="method-badge {{ ep.method|lower }}">{{ ep.method }}</span>
                             </div>
+
                             <div class="endpoint-tags">
                                 {% for tag in ep.tags %}
-                                <span class="tag">{{ tag }}</span>
+                                <span class="tag {{ tag }}">{{ tag }}</span>
                                 {% endfor %}
                             </div>
+
                             <div class="endpoint-description">{{ ep.description }}</div>
                             <div class="endpoint-url">{{ data.base_url }}{{ ep.url }}</div>
 
@@ -3096,7 +3337,6 @@ def get_endpoints_info():
         const BASE_URL = '{{ data.base_url }}';
         const testResults = {};
 
-        // Get parameters from form
         function getParams(card) {
             const params = {};
             card.querySelectorAll('.ep-param').forEach(input => {
@@ -3111,17 +3351,12 @@ def get_endpoints_info():
             return params;
         }
 
-        // RUN button - Opens API in new window/tab
         function runAPI(btn) {
             const card = btn.closest('.endpoint-card');
             const url = card.dataset.epUrl;
             const method = card.dataset.epMethod;
             const params = getParams(card);
-
-            console.log('RUN:', method, url, params);
-
             if (method === 'GET') {
-                // Build query string
                 const queryParams = new URLSearchParams();
                 Object.entries(params).forEach(([key, val]) => {
                     if (Array.isArray(val)) {
@@ -3131,24 +3366,19 @@ def get_endpoints_info():
                     }
                 });
                 const fullUrl = BASE_URL + url + (queryParams.toString() ? '?' + queryParams.toString() : '');
-                console.log('Opening:', fullUrl);
                 window.open(fullUrl, '_blank');
             } else {
-                // POST - test it and show modal
                 testAPI(btn);
             }
         }
 
-        // TEST button - Tests and shows result in modal
         async function testAPI(btn) {
             const card = btn.closest('.endpoint-card');
             const url = card.dataset.epUrl;
             const method = card.dataset.epMethod;
             const params = getParams(card);
-
             btn.classList.add('loading');
             btn.innerHTML = '<span class="spinner"></span> Testing...';
-
             try {
                 let response;
                 if (method === 'GET') {
@@ -3161,23 +3391,19 @@ def get_endpoints_info():
                         }
                     });
                     const fullUrl = BASE_URL + url + (queryParams.toString() ? '?' + queryParams.toString() : '');
-                    console.log('Testing GET:', fullUrl);
                     response = await fetch(fullUrl);
                 } else {
-                    console.log('Testing POST:', url, params);
                     response = await fetch(BASE_URL + url, {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify(params)
                     });
                 }
-
                 const data = await response.json();
-                document.getElementById('modalTitle').textContent = 'Test Result: ' + card.querySelector('.endpoint-title').textContent;
+                document.getElementById('modalTitle').textContent = 'Result: ' + card.querySelector('.endpoint-title').textContent;
                 document.getElementById('modalResult').textContent = JSON.stringify(data, null, 2);
                 document.getElementById('resultModal').classList.add('active');
             } catch (error) {
-                console.error('Test error:', error);
                 document.getElementById('modalTitle').textContent = 'Error';
                 document.getElementById('modalResult').textContent = 'Error: ' + error.message;
                 document.getElementById('resultModal').classList.add('active');
@@ -3191,7 +3417,6 @@ def get_endpoints_info():
             document.getElementById('resultModal').classList.remove('active');
         }
 
-        // Tab switching
         document.querySelectorAll('.nav-tab').forEach(tab => {
             tab.addEventListener('click', function() {
                 document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
@@ -3201,16 +3426,13 @@ def get_endpoints_info():
             });
         });
 
-        // Server testing
         async function testServer(serverName) {
             const card = document.querySelector(`[data-server="${serverName}"]`);
             const btn = card.querySelector('.test-btn');
             const status = card.querySelector('.server-status');
-
             card.classList.remove('success', 'error');
             btn.innerHTML = '<span class="spinner"></span> Testing...';
             status.textContent = 'Testing...';
-
             try {
                 const response = await fetch(BASE_URL + '/api/live_metrics', {
                     method: 'POST',
@@ -3218,17 +3440,13 @@ def get_endpoints_info():
                     body: JSON.stringify({servers: [serverName]})
                 });
                 const data = await response.json();
-                testResults[serverName] = data;
-
                 if (data.success && data.servers[0].status === 'online') {
                     card.classList.add('success');
                     btn.classList.add('success');
                     btn.innerHTML = '<i class="fas fa-check"></i> Online';
                     status.className = 'server-status online';
                     status.textContent = 'Online';
-                } else {
-                    throw new Error('Offline');
-                }
+                } else { throw new Error('Offline'); }
             } catch (error) {
                 card.classList.add('error');
                 btn.classList.add('error');
@@ -3241,7 +3459,6 @@ def get_endpoints_info():
         async function testAllServers() {
             const btn = document.querySelector('.test-all-btn');
             btn.innerHTML = '<span class="spinner"></span> Testing All...';
-
             try {
                 const response = await fetch(BASE_URL + '/api/live_metrics', {
                     method: 'POST',
@@ -3249,14 +3466,12 @@ def get_endpoints_info():
                     body: JSON.stringify({})
                 });
                 const data = await response.json();
-
                 if (data.success) {
                     data.servers.forEach(server => {
                         const card = document.querySelector(`[data-server="${server.name}"]`);
                         if (!card) return;
                         const testBtn = card.querySelector('.test-btn');
                         const status = card.querySelector('.server-status');
-
                         if (server.status === 'online') {
                             card.classList.add('success');
                             testBtn.innerHTML = '<i class="fas fa-check"></i> Online';
@@ -3275,7 +3490,6 @@ def get_endpoints_info():
             }
         }
 
-        // Search
         const searchInput = document.getElementById('searchInput');
         if (searchInput) {
             searchInput.addEventListener('input', function() {
@@ -3287,7 +3501,6 @@ def get_endpoints_info():
             });
         }
 
-        // Filters
         document.querySelectorAll('.filter-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -3300,13 +3513,12 @@ def get_endpoints_info():
         });
     </script>
 </body>
-</html>'''
+</html>"""
 
     return render_template_string(html, data=endpoints_data)
 
 
-
-@bp.route('/api/live_metrics', methods=['POST'])
+@bp.route("/api/live_metrics", methods=["POST"])
 def get_live_metrics():
     """
     Get LIVE CPU, Memory, and Storage metrics for multiple servers
@@ -3316,7 +3528,7 @@ def get_live_metrics():
         data = request.get_json()
 
         # Get server names from request (or use all servers)
-        requested_servers = data.get('servers', []) if data else []
+        requested_servers = data.get("servers", []) if data else []
 
         # If no servers specified, use all servers
         if not requested_servers:
@@ -3324,54 +3536,83 @@ def get_live_metrics():
         else:
             # Filter servers by name
             servers_to_check = [
-                s for s in Config.SERVERS 
-                if s['name'] in requested_servers
+                s for s in Config.SERVERS if s["name"] in requested_servers
             ]
 
         if not servers_to_check:
-            return jsonify({
-                'success': False, 
-                'error': 'No valid servers specified'
-            }), 400
+            return (
+                jsonify({"success": False, "error": "No valid servers specified"}),
+                400,
+            )
 
         # Fetch metrics in parallel using ThreadPoolExecutor
         def fetch_live_metrics(server):
-            """Fetch live metrics for a single server"""
             try:
-                # Test connection first
-                test_cmd = "echo 'ok'"
+                server_name = server["name"]
+                server_ip = server["ip"]
+
+                test_cmd = "echo ok"
                 status = execute_ssh_command(server, test_cmd)
 
-                if status != 'ok':
+                if status == "ok":
+                    cpu = get_cpu_usage(server)
+                    memory = get_memory_info(server)
+                    storage = get_storage_info(server)
                     return {
-                        'name': server['name'],
-                        'group': server.get('group', 'default'),
-                        'status': 'offline',
-                        'timestamp': datetime.now().isoformat()
+                        "name": server_name,
+                        "group": server.get("group", "default"),
+                        "status": "online",
+                        "ping_status": "reachable",
+                        "ssh_status": "reachable",
+                        "cpu": cpu,
+                        "memory": memory,
+                        "storage": storage,
+                        "timestamp": datetime.now().isoformat(),
                     }
 
-                # Fetch live metrics
-                cpu = get_cpu_usage(server)
-                memory = get_memory_info(server)
-                storage = get_storage_info(server)
+                # SSH failed — check ping to differentiate
+                ping_ok = check_ping(server_ip)
+
+                if ping_ok:
+                    return {
+                        "name": server_name,
+                        "group": server.get("group", "default"),
+                        "status": "ssh_unreachable",  # 🟡 WARNING
+                        "ping_status": "reachable",
+                        "ssh_status": "unreachable",
+                        "error": "Ping OK but SSH not responding",
+                        "timestamp": datetime.now().isoformat(),
+                    }
 
                 return {
-                    'name': server['name'],
-                    'group': server.get('group', 'default'),
-                    'status': 'online',
-                    'cpu': cpu,
-                    'memory': memory,
-                    'storage': storage,
-                    'timestamp': datetime.now().isoformat()
+                    "name": server_name,
+                    "group": server.get("group", "default"),
+                    "status": "offline",  # 🔴 CRITICAL
+                    "ping_status": "unreachable",
+                    "ssh_status": "unreachable",
+                    "timestamp": datetime.now().isoformat(),
                 }
 
             except Exception as e:
+                ping_ok = check_ping(server.get("ip", ""))
+                if ping_ok:
+                    return {
+                        "name": server["name"],
+                        "group": server.get("group", "default"),
+                        "status": "ssh_unreachable",
+                        "ping_status": "reachable",
+                        "ssh_status": "unreachable",
+                        "error": str(e),
+                        "timestamp": datetime.now().isoformat(),
+                    }
                 return {
-                    'name': server['name'],
-                    'group': server.get('group', 'default'),
-                    'status': 'error',
-                    'error': str(e),
-                    'timestamp': datetime.now().isoformat()
+                    "name": server["name"],
+                    "group": server.get("group", "default"),
+                    "status": "offline",
+                    "ping_status": "unreachable",
+                    "ssh_status": "unreachable",
+                    "error": str(e),
+                    "timestamp": datetime.now().isoformat(),
                 }
 
         # Execute in parallel with max 20 workers
@@ -3380,7 +3621,7 @@ def get_live_metrics():
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_server = {
-                executor.submit(fetch_live_metrics, server): server 
+                executor.submit(fetch_live_metrics, server): server
                 for server in servers_to_check
             }
 
@@ -3389,31 +3630,31 @@ def get_live_metrics():
                 results.append(result)
 
         # Sort results by server name
-        results.sort(key=lambda x: x['name'])
+        results.sort(key=lambda x: x["name"])
 
-        return jsonify({
-            'success': True,
-            'total_servers': len(results),
-            'online_servers': sum(1 for r in results if r['status'] == 'online'),
-            'offline_servers': sum(1 for r in results if r['status'] == 'offline'),
-            'servers': results,
-            'fetched_at': datetime.now().isoformat()
-        })
+        return jsonify(
+            {
+                "success": True,
+                "total_servers": len(results),
+                "online_servers": sum(1 for r in results if r["status"] == "online"),
+                "offline_servers": sum(1 for r in results if r["status"] == "offline"),
+                "servers": results,
+                "fetched_at": datetime.now().isoformat(),
+            }
+        )
 
     except Exception as e:
         current_app.logger.error(f"Error in get_live_metrics: {str(e)}")
         current_app.logger.error(traceback.format_exc())
-        return jsonify({
-            'success': False, 
-            'error': str(e)
-        }), 500
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 # ============================================
 # ALTERNATIVE: GET method version (simpler)
 # ============================================
 
-@bp.route('/api/live_metrics_get', methods=['GET'])
+
+@bp.route("/api/live_metrics_get", methods=["GET"])
 def get_live_metrics_simple():
     """
     Get LIVE metrics via GET request
@@ -3422,76 +3663,116 @@ def get_live_metrics_simple():
     """
     try:
         # Get server names from query params
-        requested_servers = request.args.getlist('servers')
+        requested_servers = request.args.getlist("servers")
 
         # If no servers specified, use all servers
         if not requested_servers:
             servers_to_check = Config.SERVERS
         else:
             servers_to_check = [
-                s for s in Config.SERVERS 
-                if s['name'] in requested_servers
+                s for s in Config.SERVERS if s["name"] in requested_servers
             ]
 
         if not servers_to_check:
-            return jsonify({
-                'success': False, 
-                'error': 'No valid servers specified'
-            }), 400
+            return (
+                jsonify({"success": False, "error": "No valid servers specified"}),
+                400,
+            )
 
         # Fetch metrics function
         def fetch_live_metrics(server):
             try:
-                test_cmd = "echo 'ok'"
+                server_name = server["name"]
+                server_ip = server["ip"]
+
+                test_cmd = "echo ok"
                 status = execute_ssh_command(server, test_cmd)
 
-                if status != 'ok':
+                if status == "ok":
+                    cpu = get_cpu_usage(server)
+                    memory = get_memory_info(server)
+                    storage = get_storage_info(server)
                     return {
-                        'name': server['name'],
-                        'status': 'offline',
-                        'timestamp': datetime.now().isoformat()
+                        "name": server_name,
+                        "group": server.get("group", "default"),
+                        "status": "online",
+                        "ping_status": "reachable",
+                        "ssh_status": "reachable",
+                        "cpu": cpu,
+                        "memory": memory,
+                        "storage": storage,
+                        "timestamp": datetime.now().isoformat(),
+                    }
+
+                # SSH failed — check ping to differentiate
+                ping_ok = check_ping(server_ip)
+
+                if ping_ok:
+                    return {
+                        "name": server_name,
+                        "group": server.get("group", "default"),
+                        "status": "ssh_unreachable",  # 🟡 WARNING
+                        "ping_status": "reachable",
+                        "ssh_status": "unreachable",
+                        "error": "Ping OK but SSH not responding",
+                        "timestamp": datetime.now().isoformat(),
                     }
 
                 return {
-                    'name': server['name'],
-                    'group': server.get('group', 'default'),
-                    'status': 'online',
-                    'cpu': get_cpu_usage(server),
-                    'memory': get_memory_info(server),
-                    'storage': get_storage_info(server),
-                    'timestamp': datetime.now().isoformat()
+                    "name": server_name,
+                    "group": server.get("group", "default"),
+                    "status": "offline",  # 🔴 CRITICAL
+                    "ping_status": "unreachable",
+                    "ssh_status": "unreachable",
+                    "timestamp": datetime.now().isoformat(),
                 }
+
             except Exception as e:
+                ping_ok = check_ping(server.get("ip", ""))
+                if ping_ok:
+                    return {
+                        "name": server["name"],
+                        "group": server.get("group", "default"),
+                        "status": "ssh_unreachable",
+                        "ping_status": "reachable",
+                        "ssh_status": "unreachable",
+                        "error": str(e),
+                        "timestamp": datetime.now().isoformat(),
+                    }
                 return {
-                    'name': server['name'],
-                    'status': 'error',
-                    'error': str(e),
-                    'timestamp': datetime.now().isoformat()
+                    "name": server["name"],
+                    "group": server.get("group", "default"),
+                    "status": "offline",
+                    "ping_status": "unreachable",
+                    "ssh_status": "unreachable",
+                    "error": str(e),
+                    "timestamp": datetime.now().isoformat(),
                 }
 
         # Execute in parallel
         results = []
         with ThreadPoolExecutor(max_workers=min(20, len(servers_to_check))) as executor:
             future_to_server = {
-                executor.submit(fetch_live_metrics, server): server 
+                executor.submit(fetch_live_metrics, server): server
                 for server in servers_to_check
             }
 
             for future in as_completed(future_to_server):
                 results.append(future.result())
 
-        results.sort(key=lambda x: x['name'])
+        results.sort(key=lambda x: x["name"])
 
-        return jsonify({
-            'success': True,
-            'total_servers': len(results),
-            'servers': results,
-            'fetched_at': datetime.now().isoformat()
-        })
+        return jsonify(
+            {
+                "success": True,
+                "total_servers": len(results),
+                "servers": results,
+                "fetched_at": datetime.now().isoformat(),
+            }
+        )
 
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 # ============================================
@@ -3499,19 +3780,19 @@ def get_live_metrics_simple():
 # ============================================
 
 
-@bp.route('/api/server_logs', methods=['POST'])
+@bp.route("/api/server_logs", methods=["POST"])
 def get_server_logs():
     """Fetch journalctl logs from a server"""
     try:
         data = request.get_json()
         if not data:
-            return jsonify({'success': False, 'error': 'No data provided'}), 400
+            return jsonify({"success": False, "error": "No data provided"}), 400
 
-        server_name = data.get('server')
-        lines = data.get('lines', 200)
+        server_name = data.get("server")
+        lines = data.get("lines", 200)
 
         if not server_name:
-            return jsonify({'success': False, 'error': 'Server name required'}), 400
+            return jsonify({"success": False, "error": "Server name required"}), 400
 
         # CORRECT: Import from root config.py
         # Add root directory to path
@@ -3525,20 +3806,28 @@ def get_server_logs():
         # Find server in Config.SERVERS list
         server_config = None
         for server in Config.SERVERS:
-            if server['name'] == server_name:
+            if server["name"] == server_name:
                 server_config = server
                 break
 
         if not server_config:
-            return jsonify({'success': False, 'error': f'Server "{server_name}" not found'}), 404
+            return (
+                jsonify(
+                    {"success": False, "error": f'Server "{server_name}" not found'}
+                ),
+                404,
+            )
 
         # Extract connection details
-        host = server_config.get('ip')
-        username = server_config.get('username')
-        password = server_config.get('password')
+        host = server_config.get("ip")
+        username = server_config.get("username")
+        password = server_config.get("password")
 
         if not all([host, username, password]):
-            return jsonify({'success': False, 'error': 'Server configuration incomplete'}), 400
+            return (
+                jsonify({"success": False, "error": "Server configuration incomplete"}),
+                400,
+            )
 
         # SSH connect using password
         ssh = paramiko.SSHClient()
@@ -3546,11 +3835,7 @@ def get_server_logs():
 
         try:
             ssh.connect(
-                hostname=host,
-                port=22,
-                username=username,
-                password=password,
-                timeout=10
+                hostname=host, port=22, username=username, password=password, timeout=10
             )
 
             # Try multiple commands to get logs
@@ -3563,9 +3848,13 @@ def get_server_logs():
             for cmd in commands:
                 try:
                     stdin, stdout, stderr = ssh.exec_command(cmd, timeout=15)
-                    output = stdout.read().decode('utf-8', errors='ignore').strip()
+                    output = stdout.read().decode("utf-8", errors="ignore").strip()
 
-                    if output and 'No such file' not in output and 'command not found' not in output.lower():
+                    if (
+                        output
+                        and "No such file" not in output
+                        and "command not found" not in output.lower()
+                    ):
                         logs = output
                         break
                 except Exception as e:
@@ -3575,27 +3864,39 @@ def get_server_logs():
             ssh.close()
 
             if not logs:
-                return jsonify({
-                    'success': True, 
-                    'server': server_name,
-                    'logs': ['No logs available or journalctl not accessible'],
-                    'count': 1
-                })
+                return jsonify(
+                    {
+                        "success": True,
+                        "server": server_name,
+                        "logs": ["No logs available or journalctl not accessible"],
+                        "count": 1,
+                    }
+                )
 
             # Parse logs into lines
-            log_lines = [line.strip() for line in logs.split('\n') if line.strip()]
+            log_lines = [line.strip() for line in logs.split("\n") if line.strip()]
             log_lines = log_lines[-lines:]  # Get last N lines
 
-            return jsonify({
-                'success': True,
-                'server': server_name,
-                'logs': log_lines,
-                'count': len(log_lines)
-            })
+            return jsonify(
+                {
+                    "success": True,
+                    "server": server_name,
+                    "logs": log_lines,
+                    "count": len(log_lines),
+                }
+            )
 
         except Exception as ssh_error:
             current_app.logger.error(f"SSH error for {server_name}: {str(ssh_error)}")
-            return jsonify({'success': False, 'error': f'SSH connection failed: {str(ssh_error)}'}), 500
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": f"SSH connection failed: {str(ssh_error)}",
+                    }
+                ),
+                500,
+            )
         finally:
             try:
                 ssh.close()
@@ -3605,7 +3906,7 @@ def get_server_logs():
     except Exception as e:
         current_app.logger.error(f"Error in get_server_logs: {str(e)}")
         current_app.logger.error(traceback.format_exc())
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 # ==================== START BACKGROUND THREAD ====================
@@ -3614,6 +3915,7 @@ def start_background_collection():
     collection_thread = threading.Thread(target=collect_server_data, daemon=True)
     collection_thread.start()
     print("✅ Background SSH tracking started!")
+
 
 # Start immediately when module loads
 start_background_collection()

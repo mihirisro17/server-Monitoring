@@ -144,23 +144,23 @@
 #         ],
 #     }
 
+
 #     # Flatten servers list for backward compatibility
 #     SERVERS = [server for group in SERVER_GROUPS.values() for server in group]
 class Config:
     SECRET_KEY = "your-secret-key-change-in-production"
     CACHE_TIMEOUT = 30  # seconds
     IP_NAME_MAP = {
-        '192.168.2.202': 'Mihir',
-        '192.168.2.220': 'Harish',
-        '192.168.2.141': 'Vikrant',
-        '192.168.2.221': 'Karnav',
-        '192.168.2.205': 'Vidit',
-        '192.168.2.210': 'Arpan',
-        '192.168.2.206': 'Krishna',
-        
+        "192.168.2.202": "Mihir",
+        "192.168.2.220": "Harish",
+        "192.168.2.141": "Vikrant",
+        "192.168.2.221": "Karnav",
+        "192.168.2.205": "Vidit",
+        "192.168.2.210": "Arpan",
+        "192.168.2.206": "Krishna",
         # Add more mappings as needed
     }
-    
+
     # Server Groups Configuration
     SERVER_GROUPS = {
         "data": [
@@ -181,7 +181,7 @@ class Config:
                 "ip": "192.168.2.68",
                 "username": "sambauser",
                 "password": "samba@123",
-            }
+            },
             # {"name": "2.149", "ip": "192.168.2.19", "username": "sc", "password": "s@123"},
             # Add more data servers...
         ],
@@ -227,7 +227,7 @@ class Config:
                 "ip": "192.168.2.150",
                 "username": "sac",
                 "password": "sac@123",
-            }
+            },
             # Add deployment servers...
         ],
         "stagging": [
@@ -260,7 +260,7 @@ class Config:
                 "ip": "192.168.2.136",
                 "username": "sac",
                 "password": "sac@123",
-            }
+            },
             # Add staging servers...
         ],
         "gpus": [
@@ -269,18 +269,21 @@ class Config:
                 "ip": "192.168.2.213",
                 "username": "sac",
                 "password": "sac123",
+                "group": "gpus",
             },
             {
                 "name": "214 - V100 - V1G3",
                 "ip": "192.168.2.214",
                 "username": "sac",
                 "password": "sac123",
+                "group": "gpus",
             },
             {
                 "name": "231 - H100 - V1G1",
                 "ip": "192.168.2.231",
                 "username": "sac",
                 "password": "sac@123",
+                "group": "gpus",
             },
             # Add GPU servers...
         ],
@@ -297,24 +300,22 @@ class Config:
             #     "username": "sac",
             #     "password": "sac123",
             # }
-
             # Add nginx servers...
         ],
-        "development": [
-        ],
+        "development": [],
     }
-    
+
     # Flatten servers list for easy access
     SERVERS = []
     for group_name, servers in SERVER_GROUPS.items():
         for server in servers:
-            server['group'] = group_name
+            server["group"] = group_name
             SERVERS.append(server)
-    
+
     # Alert Thresholds
     THRESHOLDS = {
-        'cpu': {'warning': 70, 'critical': 90},
-        'memory': {'warning': 75, 'critical': 90},
-        'storage': {'warning': 80, 'critical': 90},
-        'load_avg': {'warning': 2.0, 'critical': 4.0}
+        "cpu": {"warning": 70, "critical": 90},
+        "memory": {"warning": 75, "critical": 90},
+        "storage": {"warning": 80, "critical": 90},
+        "load_avg": {"warning": 2.0, "critical": 4.0},
     }

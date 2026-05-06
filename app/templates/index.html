@@ -1,189 +1,643 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Server Monitoring Dashboard</title>
-        <!-- CSS -->
-        <!-- <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"> -->
-        <!-- <link rel="stylesheet" href="{{ url_prefix }}/static/css/style.css"> -->
-        <link rel="stylesheet" href="{{ url_prefix }}/static/css/style.css?v=2">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-        <link rel="stylesheet" href="{{ url_prefix }}/static/css/fontawesome.min.css">
-        <!-- Chart.js for Memory Pie Chart -->
-        <script src="{{ url_prefix }}/static/js/lib/chart.min.js"></script>
-        <script src="{{ url_prefix }}/static/js/lib/chart.js"></script>
-        <script src="{{ url_prefix }}/static/js/lib/highcharts.js"></script>
-        <script src="{{ url_prefix }}/static/js/lib/exporting.js"></script>
-        <script src="{{ url_prefix }}/static/js/lib/boost.js"></script>
-        <!-- <link rel="icon" type="image/x-icon" href="{{ url_prefix }}/static/favicon.ico"> -->
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Server Monitoring Dashboard</title>
+    <link rel="stylesheet" href="{{ url_prefix }}/static/css/style.css?v=3" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="stylesheet" href="{{ url_prefix }}/static/css/fontawesome.min.css" />
+    <script src="{{ url_prefix }}/static/js/lib/chart.min.js"></script>
+    <script src="{{ url_prefix }}/static/js/lib/chart.js"></script>
+    <script src="{{ url_prefix }}/static/js/lib/highcharts.js"></script>
+    <script src="{{ url_prefix }}/static/js/lib/exporting.js"></script>
+    <script src="{{ url_prefix }}/static/js/lib/boost.js"></script>
 
-        <!-- Highcharts for Analytics Charts -->
-        <!-- <script src="{{ url_for('static', filename='js/lib/chart.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/lib/chart.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/lib/highcharts.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/lib/exporting.js') }}"></script>
-    <script src="/home/sac/Mihir/server_monitoring_new/app/static/js/lib/boost.js"></script> -->
-    </head>
-    <body class="theme-dark">
-        <!-- Sidebar Navigation -->
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <i class="fas fa-server"></i>
-                <h2>Server Monitor</h2>
+    <style id="mso-styles">
+        #mso-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(4, 6, 14, 0.97);
+            backdrop-filter: blur(20px) saturate(1.5);
+            -webkit-backdrop-filter: blur(20px) saturate(1.5);
+            overflow-y: auto;
+            padding: 24px 16px;
+            animation: msoIn 0.38s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        @keyframes msoIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        #mso-overlay.mso-out {
+            animation: msoOut 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            pointer-events: none;
+        }
+
+        @keyframes msoOut {
+            to {
+                opacity: 0;
+                transform: scale(0.97);
+            }
+        }
+
+        .mso-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 860px;
+            margin: auto;
+            animation: msoUp 0.42s cubic-bezier(0.16, 1, 0.3, 1) 0.04s both;
+        }
+
+        @keyframes msoUp {
+            from {
+                opacity: 0;
+                transform: translateY(24px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .mso-logo {
+            width: 54px;
+            height: 54px;
+            border-radius: 16px;
+            background: rgba(102, 126, 234, 0.12);
+            border: 1px solid rgba(102, 126, 234, 0.24);
+            display: grid;
+            place-items: center;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+            flex-shrink: 0;
+            box-shadow: 0 0 44px rgba(102, 126, 234, 0.16), 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .mso-logo::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: conic-gradient(from 0deg, transparent, rgba(102, 126, 234, 0.45) 60deg, transparent 120deg);
+            animation: msoSpin 5s linear infinite;
+            opacity: 0.7;
+        }
+
+        @keyframes msoSpin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .mso-logo svg {
+            width: 26px;
+            height: 26px;
+            color: #a5b4fc;
+            position: relative;
+            z-index: 1;
+            filter: drop-shadow(0 0 7px rgba(102, 126, 234, 0.7));
+        }
+
+        .mso-title {
+            font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+            font-size: clamp(1.3rem, 2.6vw, 1.85rem);
+            font-weight: 800;
+            letter-spacing: -0.04em;
+            color: #e2e8f0;
+            text-align: center;
+            margin-bottom: 8px;
+            line-height: 1.2;
+        }
+
+        .mso-sub {
+            font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+            font-size: 0.83rem;
+            color: rgba(148, 163, 184, 0.55);
+            text-align: center;
+            margin-bottom: 28px;
+            line-height: 1.6;
+        }
+
+        .mso-sub strong {
+            color: rgba(226, 232, 240, 0.88);
+            font-weight: 700;
+        }
+
+        /* progress bar */
+        .mso-bar-wrap {
+            width: 200px;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.07);
+            border-radius: 999px;
+            overflow: hidden;
+            margin-bottom: 28px;
+        }
+
+        .mso-bar {
+            height: 100%;
+            border-radius: inherit;
+            transform-origin: left;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+
+        .mso-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+            width: 100%;
+        }
+
+        @media(max-width:680px) {
+            .mso-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media(max-width:440px) {
+            .mso-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .mso-card {
+            position: relative;
+            background: rgba(10, 12, 22, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 18px;
+            padding: 22px 18px 18px;
+            cursor: pointer !important;
+            text-align: left;
+            outline: none;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            pointer-events: all !important;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .mso-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .mso-card:hover,
+        .mso-card:focus-visible {
+            transform: translateY(-5px) scale(1.022);
+            border-color: rgba(255, 255, 255, 0.13);
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.6);
+        }
+
+        .mso-card:hover::before {
+            opacity: 1;
+        }
+
+        .mso-card:active {
+            transform: translateY(-1px) scale(1.008);
+        }
+
+        /* Server */
+        .mso-srv::before {
+            background: linear-gradient(90deg, transparent, #667eea, #764ba2, transparent);
+        }
+
+        .mso-srv.mso-active {
+            border-color: rgba(102, 126, 234, 0.55);
+            box-shadow: 0 16px 42px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(102, 126, 234, 0.22), 0 0 32px rgba(102, 126, 234, 0.14);
+            transform: translateY(-5px) scale(1.022);
+        }
+
+        .mso-srv.mso-active::before {
+            opacity: 1;
+        }
+
+        .mso-srv .mso-ico {
+            background: rgba(102, 126, 234, 0.13);
+            border: 1px solid rgba(102, 126, 234, 0.18);
+        }
+
+        .mso-srv .mso-ico svg {
+            color: #818cf8;
+        }
+
+        .mso-srv .mso-chip {
+            background: rgba(102, 126, 234, 0.11);
+            color: #a5b4fc;
+            border: 1px solid rgba(102, 126, 234, 0.14);
+        }
+
+        .mso-srv .mso-tick {
+            background: #6366f1;
+        }
+
+        /* GPU */
+        .mso-gpu::before {
+            background: linear-gradient(90deg, transparent, #00d4ff, #22d3ee, transparent);
+        }
+
+        .mso-gpu.mso-active {
+            border-color: rgba(0, 212, 255, 0.55);
+            box-shadow: 0 16px 42px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(0, 212, 255, 0.22), 0 0 32px rgba(0, 212, 255, 0.14);
+            transform: translateY(-5px) scale(1.022);
+        }
+
+        .mso-gpu.mso-active::before {
+            opacity: 1;
+        }
+
+        .mso-gpu .mso-ico {
+            background: rgba(0, 212, 255, 0.09);
+            border: 1px solid rgba(0, 212, 255, 0.15);
+        }
+
+        .mso-gpu .mso-ico svg {
+            color: #22d3ee;
+        }
+
+        .mso-gpu .mso-chip {
+            background: rgba(0, 212, 255, 0.08);
+            color: #67e8f9;
+            border: 1px solid rgba(0, 212, 255, 0.12);
+        }
+
+        .mso-gpu .mso-tick {
+            background: #06b6d4;
+        }
+
+        /* Storage */
+        .mso-sto::before {
+            background: linear-gradient(90deg, transparent, #10b981, #34d399, transparent);
+        }
+
+        .mso-sto.mso-active {
+            border-color: rgba(16, 185, 129, 0.55);
+            box-shadow: 0 16px 42px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(16, 185, 129, 0.22), 0 0 32px rgba(16, 185, 129, 0.14);
+            transform: translateY(-5px) scale(1.022);
+        }
+
+        .mso-sto.mso-active::before {
+            opacity: 1;
+        }
+
+        .mso-sto .mso-ico {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.18);
+        }
+
+        .mso-sto .mso-ico svg {
+            color: #34d399;
+        }
+
+        .mso-sto .mso-chip {
+            background: rgba(16, 185, 129, 0.09);
+            color: #6ee7b7;
+            border: 1px solid rgba(16, 185, 129, 0.13);
+        }
+
+        .mso-sto .mso-tick {
+            background: #10b981;
+        }
+
+        .mso-ico {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            display: grid;
+            place-items: center;
+            margin-bottom: 14px;
+            transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .mso-ico svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .mso-card:hover .mso-ico,
+        .mso-card.mso-active .mso-ico {
+            transform: scale(1.12);
+        }
+
+        .mso-card-title {
+            font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+            font-size: 0.96rem;
+            font-weight: 800;
+            color: #e2e8f0;
+            margin-bottom: 6px;
+            letter-spacing: -0.02em;
+        }
+
+        .mso-card-desc {
+            font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+            font-size: 0.72rem;
+            color: rgba(148, 163, 184, 0.56);
+            line-height: 1.5;
+            margin-bottom: 14px;
+            flex: 1;
+        }
+
+        .mso-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: auto;
+        }
+
+        .mso-chip {
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-family: system-ui, sans-serif;
+            font-size: 0.56rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .mso-tick {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            opacity: 0;
+            transform: scale(0.3);
+            transition: all 0.24s cubic-bezier(0.34, 1.56, 0.64, 1);
+            pointer-events: none;
+        }
+
+        .mso-tick svg {
+            width: 10px;
+            height: 10px;
+            color: #fff;
+        }
+
+        .mso-card.mso-active .mso-tick {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .mso-hint {
+            font-family: system-ui, sans-serif;
+            font-size: 0.6rem;
+            color: rgba(148, 163, 184, 0.22);
+            margin-top: 18px;
+            text-align: center;
+            letter-spacing: 0.03em;
+        }
+
+        .mso-hint kbd {
+            padding: 1px 5px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            font-size: 0.56rem;
+        }
+
+        /* Full-screen iframe */
+        #mso-frame-wrap {
+            position: fixed;
+            inset: 0;
+            z-index: 99998;
+            display: flex;
+            flex-direction: column;
+            background: #07080b;
+            animation: msoIn 0.3s ease both;
+        }
+
+        .mso-frame-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 9px 16px;
+            background: rgba(0, 0, 0, 0.6);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+            flex-shrink: 0;
+        }
+
+        .mso-frame-title {
+            font-family: system-ui, sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            color: #a5b4fc;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .mso-frame-title svg {
+            width: 15px;
+            height: 15px;
+        }
+
+        #mso-back-btn {
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.11);
+            color: #94a3b8;
+            border-radius: 8px;
+            padding: 5px 14px;
+            font-size: 12px;
+            cursor: pointer;
+            font-family: system-ui, sans-serif;
+            font-weight: 600;
+            transition: all 0.16s;
+        }
+
+        #mso-back-btn:hover {
+            background: rgba(255, 255, 255, 0.13);
+            color: #e2e8f0;
+        }
+
+        #mso-frame-wrap iframe {
+            flex: 1;
+            border: none;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Sidebar Switch Monitor */
+        .mso-sidebar-divider {
+            margin: 10px 16px 6px;
+            border: none;
+            border-top: 1px solid rgba(255, 255, 255, 0.07);
+        }
+
+        .mso-sidebar-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: calc(100% - 32px);
+            margin: 4px 16px 12px;
+            padding: 9px 14px;
+            background: rgba(102, 126, 234, 0.09);
+            border: 1px solid rgba(102, 126, 234, 0.18);
+            border-radius: 10px;
+            color: #a5b4fc;
+            font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.18s;
+            text-decoration: none;
+        }
+
+        .mso-sidebar-btn:hover {
+            background: rgba(102, 126, 234, 0.18);
+            border-color: rgba(102, 126, 234, 0.35);
+            color: #c7d2fe;
+            transform: translateX(2px);
+        }
+
+        .mso-sidebar-btn i {
+            font-size: 0.85rem;
+            flex-shrink: 0;
+        }
+    </style>
+</head>
+
+<body class="theme-dark">
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-server"></i>
+            <h2>Server Monitor</h2>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="#" class="nav-item active" data-page="dashboard">
+                <i class="fas fa-tachometer-alt"></i><span>Dashboard</span>
+            </a>
+            <a href="#" class="nav-item" data-page="servers">
+                <i class="fas fa-server"></i><span>All Servers</span>
+            </a>
+            <a href="#" class="nav-item" data-page="alerts">
+                <i class="fas fa-bell"></i><span>Alerts</span>
+                <span class="badge" id="alert-badge">0</span>
+            </a>
+            <a href="#" class="nav-item" data-page="analytics">
+                <i class="fas fa-chart-line"></i><span>Analytics</span>
+            </a>
+            <a href="#" class="nav-item" data-page="user-tracking">
+                <i class="fas fa-users"></i><span>User Tracking</span>
+            </a>
+            <a href="#" class="nav-item" data-page="settings">
+                <i class="fas fa-cog"></i><span>Settings</span>
+            </a>
+        </nav>
+        <hr class="mso-sidebar-divider" />
+        <button class="mso-sidebar-btn" onclick="msoReopen()" type="button">
+            <i class="fas fa-th-large"></i>
+            <span>Switch Monitor</span>
+        </button>
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <i class="far fa-user-circle"></i>
+                <span>{{ user }}</span>
             </div>
-            <nav class="sidebar-nav">
-                <a href="#" class="nav-item active" data-page="dashboard">
-                    <i class="fas fa-tachometer-alt"></i>
-                    <span>Dashboard</span>
-                </a>
-                <a href="#" class="nav-item" data-page="servers">
-                    <i class="fas fa-server"></i>
-                    <span>All Servers</span>
-                </a>
-                <a href="#" class="nav-item" data-page="alerts">
-                    <i class="fas fa-bell"></i>
-                    <span>Alerts</span>
-                    <span class="badge" id="alert-badge">0</span>
-                </a>
-                <a href="#" class="nav-item" data-page="analytics">
-                    <i class="fas fa-chart-line"></i>
-                    <span>Analytics</span>
-                </a>
-                <a href="#" class="nav-item" data-page="user-tracking">
-                    <i class="fas fa-users"></i>
-                    <span>User Tracking</span>
-                </a>
-                <a href="#" class="nav-item" data-page="settings">
-                    <i class="fas fa-cog"></i>
-                    <span>Settings</span>
-                </a>
-            </nav>
-            <div class="sidebar-footer">
-                <div class="user-info">
-                    <i class="far fa-user-circle"></i>
-                    <span>{{ user }}</span>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <header class="header">
+            <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
+            <div class="header-center">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="serverSearch" placeholder="Search servers..." />
                 </div>
             </div>
-        </aside>
-        <!-- Main Content -->
-        <main class="main-content">
-            <!-- Header -->
-            <header class="header">
-                <button class="sidebar-toggle" id="sidebarToggle">
-                    <i class="fas fa-bars"></i>
-                </button>
-                <div class="header-center">
-                    <div class="search-box">
-                        <i class="fas fa-search"></i>
-                        <input type="text" id="serverSearch" placeholder="Search servers...">
-                    </div>
+            <div class="header-right">
+                <div class="theme-switcher">
+                    <button class="theme-btn" data-theme="dark" title="Dark Theme"><i class="fas fa-moon"></i></button>
+                    <button class="theme-btn" data-theme="light" title="Light Theme"><i class="fas fa-sun"></i></button>
+                    <button class="theme-btn" data-theme="blue" title="Blue Theme"><i class="fas fa-water"></i></button>
+                    <button class="theme-btn" data-theme="purple" title="Purple Theme"><i
+                            class="fas fa-gem"></i></button>
+                    <button class="theme-btn" data-theme="green" title="Green Theme"><i
+                            class="fas fa-leaf"></i></button>
                 </div>
-                <div class="header-right">
-                    <div class="theme-switcher">
-                        <button class="theme-btn" data-theme="dark" title="Dark Theme">
-                            <i class="fas fa-moon"></i>
-                        </button>
-                        <button class="theme-btn" data-theme="light" title="Light Theme">
-                            <i class="fas fa-sun"></i>
-                        </button>
-                        <button class="theme-btn" data-theme="blue" title="Blue Theme">
-                            <i class="fas fa-water"></i>
-                        </button>
-                        <button class="theme-btn" data-theme="purple" title="Purple Theme">
-                            <i class="fas fa-gem"></i>
-                        </button>
-                        <button class="theme-btn" data-theme="green" title="Green Theme">
-                            <i class="fas fa-leaf"></i>
-                        </button>
-                    </div>
-                    <div class="time-display">
-                        <i class="far fa-clock"></i>
-                        <span id="current-time">Loading...</span>
-                    </div>
+                <div class="time-display">
+                    <i class="far fa-clock"></i>
+                    <span id="current-time">Loading...</span>
                 </div>
-            </header>
-            <!-- Dashboard Page -->
-            <div class="page-content active" id="dashboard-page">
-            <!-- Stats Overview - 7 Cards -->
+            </div>
+        </header>
+
+        <div class="page-content active" id="dashboard-page">
             <div class="stats-overview-extended">
-                <!-- Clickable Cards -->
                 <div class="stat-card clickable" onclick="filterServers('all')">
-                    <div class="stat-icon online">
-                        <i class="fas fa-server"></i>
-                    </div>
+                    <div class="stat-icon online"><i class="fas fa-server"></i></div>
                     <div class="stat-content">
                         <h3 id="total-servers">0</h3>
                         <p>Total Servers</p>
                     </div>
                 </div>
-                
                 <div class="stat-card clickable" onclick="filterServers('online')">
-                    <div class="stat-icon success">
-                        <i class="fas fa-check-circle"></i>
-                    </div>
+                    <div class="stat-icon success"><i class="fas fa-check-circle"></i></div>
                     <div class="stat-content">
                         <h3 id="online-servers">0</h3>
                         <p>Online</p>
                     </div>
                 </div>
-                
                 <div class="stat-card clickable" onclick="filterServers('alerts')">
-                    <div class="stat-icon danger">
-                        <i class="fas fa-exclamation-triangle"></i>
-                    </div>
+                    <div class="stat-icon danger"><i class="fas fa-exclamation-triangle"></i></div>
                     <div class="stat-content">
                         <h3 id="alert-servers">0</h3>
                         <p>Alerts</p>
                     </div>
                 </div>
-                
-                <!-- Non-clickable Stat Cards -->
                 <div class="stat-card">
-                    <div class="stat-icon info">
-                        <i class="fas fa-microchip"></i>
-                    </div>
+                    <div class="stat-icon info"><i class="fas fa-microchip"></i></div>
                     <div class="stat-content">
                         <h3 id="avg-cpu">0%</h3>
                         <p>Avg CPU</p>
                     </div>
                 </div>
-                
                 <div class="stat-card">
-                    <div class="stat-icon warning">
-                        <i class="fas fa-memory"></i>
-                    </div>
+                    <div class="stat-icon warning"><i class="fas fa-memory"></i></div>
                     <div class="stat-content">
                         <h3 id="avg-memory">0%</h3>
                         <p>Avg Memory</p>
                     </div>
                 </div>
-                
                 <div class="stat-card">
-                    <div class="stat-icon storage">
-                        <i class="fas fa-hdd"></i>
-                    </div>
+                    <div class="stat-icon storage"><i class="fas fa-hdd"></i></div>
                     <div class="stat-content">
                         <h3 id="avg-storage">0%</h3>
                         <p>Avg Storage</p>
                     </div>
                 </div>
-                
                 <div class="stat-card">
-                    <div class="stat-icon network">
-                        <i class="fas fa-network-wired"></i>
-                    </div>
+                    <div class="stat-icon network"><i class="fas fa-network-wired"></i></div>
                     <div class="stat-content">
                         <h3 id="avg-network">0 B/s</h3>
                         <p>Avg Bandwidth</p>
                     </div>
                 </div>
             </div>
-
-
-            <!-- Filtered Server View -->
-            <div id="filtered-view" style="display: none;">
+            <div id="filtered-view" style="display:none">
                 <div class="filtered-header">
                     <button class="btn-back" onclick="closeFilteredView()">
                         <i class="fas fa-arrow-left"></i> Back to Dashboard
@@ -192,195 +646,486 @@
                 </div>
                 <div id="filtered-servers-container"></div>
             </div>
-
-            <!-- Server Groups Container -->
             <div id="servers-container"></div>
+        </div>
 
+        <div class="page-content" id="servers-page">
+            <h2 class="page-title">All Servers</h2>
+            <div id="all-servers-list"></div>
+        </div>
+        <div class="page-content" id="alerts-page">
+            <h2 class="page-title">System Alerts</h2>
+            <div id="alerts-container"></div>
+        </div>
+        <div class="page-content" id="analytics-page">
+            <div class="analytics-header">
+                <h2 class="page-title">System Analytics</h2>
+                <div class="date-range-picker">
+                    <label>From:</label><input type="date" id="date-from" />
+                    <label>To:</label><input type="date" id="date-to" />
+                    <button class="btn-primary" onclick="loadAnalyticsByDateRange()">
+                        <i class="fas fa-search"></i> Apply Filter
+                    </button>
+                </div>
             </div>
-            <!-- Servers Page -->
-            <div class="page-content" id="servers-page">
-                <h2 class="page-title">All Servers</h2>
-                <div id="all-servers-list"></div>
+            <div class="analytics-grid">
+                <div class="chart-container">
+                    <h3><i class="fas fa-microchip"></i> CPU Usage Trend</h3>
+                    <div id="cpuChart"></div>
+                    <div class="chart-controls">
+                        <button id="selectAllCpuBtn" class="btn-primary">Select All CPU</button>
+                        <button id="deselectAllCpuBtn" class="btn-secondary">Deselect All CPU</button>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <h3><i class="fas fa-memory"></i> Memory Usage Trend</h3>
+                    <div id="memoryChart"></div>
+                    <div class="chart-controls">
+                        <button id="selectAllMemBtn" class="btn-primary">Select All Memory</button>
+                        <button id="deselectAllMemBtn" class="btn-secondary">Deselect All Memory</button>
+                    </div>
+                </div>
             </div>
-            <!-- Alerts Page -->
-            <div class="page-content" id="alerts-page">
-                <h2 class="page-title">System Alerts</h2>
-                <div id="alerts-container"></div>
+        </div>
+        <div class="page-content" id="user-tracking-page">
+            <div class="analytics-header">
+                <h2 class="page-title">User SSH Activity Tracking</h2>
+                <button class="btn-primary" onclick="loadUserTracking()"><i class="fas fa-sync"></i> Refresh</button>
             </div>
-            <!-- Analytics Page with Date Range -->
-            <div class="page-content" id="analytics-page">
-                <div class="analytics-header">
-                    <h2 class="page-title">System Analytics</h2>
-                    <div class="date-range-picker">
-                        <label>From:</label>
-                        <input type="date" id="date-from">
-                        <label>To:</label>
-                        <input type="date" id="date-to">
-                        <button class="btn-primary" onclick="loadAnalyticsByDateRange()">
-                            <i class="fas fa-search"></i>
-                            Apply Filter
+            <div id="user-tracking-container"></div>
+        </div>
+        <div class="page-content" id="settings-page">
+            <h2 class="page-title">Settings</h2>
+            <div class="settings-container">
+                <div class="setting-group">
+                    <h3>Refresh Interval</h3>
+                    <select id="refresh-interval">
+                        <option value="5">5 seconds</option>
+                        <option value="10">10 seconds</option>
+                        <option value="30">30 seconds</option>
+                        <option value="60">1 minute</option>
+                    </select>
+                </div>
+                <div class="setting-group">
+                    <h3>Alert Thresholds</h3>
+                    <div class="threshold-inputs">
+                        <label>CPU Warning (%): <input type="number" id="cpu-warning" value="70" min="0"
+                                max="100" /></label>
+                        <label>CPU Critical (%): <input type="number" id="cpu-critical" value="90" min="0"
+                                max="100" /></label>
+                        <label>Memory Warning (%): <input type="number" id="mem-warning" value="75" min="0"
+                                max="100" /></label>
+                        <label>Memory Critical (%): <input type="number" id="mem-critical" value="90" min="0"
+                                max="100" /></label>
+                    </div>
+                </div>
+                <div class="setting-group">
+                    <h3>Display Options</h3>
+                    <label class="checkbox-label"><input type="checkbox" id="show-offline" checked /> Show offline
+                        servers</label>
+                    <label class="checkbox-label"><input type="checkbox" id="compact-view" /> Compact view</label>
+                </div>
+                <button class="btn-primary" onclick="saveSettings()"><i class="fas fa-save"></i> Save Settings</button>
+            </div>
+        </div>
+    </main>
+
+    <div id="server-modal" class="modal">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h2 id="modal-server-name">Server Details</h2>
+                <button class="close-btn" onclick="closeModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="tabs">
+                <div class="tab active" data-tab="overview"><i class="fas fa-eye"></i> Overview</div>
+                <div class="tab" data-tab="history"><i class="fas fa-chart-area"></i> 24h History</div>
+                <div class="tab" data-tab="storage"><i class="fas fa-hdd"></i> Storage</div>
+                <div class="tab" data-tab="processes"><i class="fas fa-list"></i> Processes</div>
+                <div class="tab" data-tab="services"><i class="fas fa-cogs"></i> Services</div>
+                <div class="tab" data-tab="ssh"><i class="fas fa-terminal"></i> SSH Sessions</div>
+            </div>
+            <div id="overview-tab" class="tab-content active"></div>
+            <div id="history-tab" class="tab-content">
+                <div class="history-charts-section">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                        <div style="display:flex;align-items:center;gap:10px">
+                            <i class="fas fa-chart-area" style="color:#667eea;font-size:1.1rem"></i>
+                            <span style="font-size:14px;font-weight:600;color:var(--text-primary);">Last 24 Hours
+                                &mdash; CPU &middot; Memory &middot; Root Storage</span>
+                        </div>
+                        <button onclick="loadHistoryCharts(document.getElementById('modal-server-name').textContent)"
+                            style="background:rgba(102,126,234,0.2);border:1px solid rgba(102,126,234,0.4);color:#a5b4fc;border-radius:8px;padding:5px 14px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                            <i class="fas fa-sync"></i> Refresh
                         </button>
                     </div>
-                </div>
-                <div class="analytics-grid">
-                    <!-- CPU Usage Chart with individual controls -->
-                    <div class="chart-container">
-                        <h3>
-                            <i class="fas fa-microchip"></i> CPU Usage Trend
-                        </h3>
-                        <div id="cpuChart"></div>
-                        <div class="chart-controls">
-                            <button id="selectAllCpuBtn" class="btn-primary">Select All CPU</button>
-                            <button id="deselectAllCpuBtn" class="btn-secondary">Deselect All CPU</button>
+                    <div class="history-charts-grid">
+                        <div class="history-chart-card">
+                            <div class="history-chart-label"><i class="fas fa-microchip" style="color:#667eea"></i> CPU
+                                Usage</div>
+                            <div class="history-chart-container" id="history-cpu-chart">
+                                <div class="history-chart-placeholder"><i class="fas fa-chart-area"></i>
+                                    <p>Open this tab to load chart</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="history-chart-card">
+                            <div class="history-chart-label"><i class="fas fa-memory" style="color:#06b6d4"></i> Memory
+                                Usage</div>
+                            <div class="history-chart-container" id="history-mem-chart">
+                                <div class="history-chart-placeholder"><i class="fas fa-chart-area"></i>
+                                    <p>Open this tab to load chart</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="history-chart-card">
+                            <div class="history-chart-label"><i class="fas fa-hdd" style="color:#10b981"></i> Root
+                                Storage</div>
+                            <div class="history-chart-container" id="history-storage-chart">
+                                <div class="history-chart-placeholder"><i class="fas fa-chart-area"></i>
+                                    <p>Open this tab to load chart</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <!-- Memory Usage Chart with individual controls -->
-                    <div class="chart-container">
-                        <h3>
-                            <i class="fas fa-memory"></i> Memory Usage Trend
-                        </h3>
-                        <div id="memoryChart"></div>
-                        <div class="chart-controls">
-                            <button id="selectAllMemBtn" class="btn-primary">Select All Memory</button>
-                            <button id="deselectAllMemBtn" class="btn-secondary">Deselect All Memory</button>
-                        </div>
-                    </div>
                 </div>
             </div>
-            <!-- User Tracking Page -->
-            <div class="page-content" id="user-tracking-page">
-                <div class="analytics-header">
-                    <h2 class="page-title">User SSH Activity Tracking</h2>
-                    <button class="btn-primary" onclick="loadUserTracking()">
-                        <i class="fas fa-sync"></i>
-                        Refresh
-                    </button>
-                </div>
-                <div id="user-tracking-container"></div>
-            </div>
-            <!-- Settings Page -->
-            <div class="page-content" id="settings-page">
-                <h2 class="page-title">Settings</h2>
-                <div class="settings-container">
-                    <div class="setting-group">
-                        <h3>Refresh Interval</h3>
-                        <select id="refresh-interval">
-                            <option value="5">5 seconds</option>
-                            <option value="10">10 seconds</option>
-                            <option value="30">30 seconds</option>
-                            <option value="60">1 minute</option>
-                        </select>
-                    </div>
-                    <div class="setting-group">
-                        <h3>Alert Thresholds</h3>
-                        <div class="threshold-inputs">
-                            <label>
-                                CPU Warning (%):
-                                <input
-                                    type="number"
-                                    id="cpu-warning"
-                                    value="70"
-                                    min="0"
-                                    max="100"
-                                >
-                            </label>
-                            <label>
-                                CPU Critical (%):
-                                <input
-                                    type="number"
-                                    id="cpu-critical"
-                                    value="90"
-                                    min="0"
-                                    max="100"
-                                >
-                            </label>
-                            <label>
-                                Memory Warning (%):
-                                <input
-                                    type="number"
-                                    id="mem-warning"
-                                    value="75"
-                                    min="0"
-                                    max="100"
-                                >
-                            </label>
-                            <label>
-                                Memory Critical (%):
-                                <input
-                                    type="number"
-                                    id="mem-critical"
-                                    value="90"
-                                    min="0"
-                                    max="100"
-                                >
-                            </label>
-                        </div>
-                    </div>
-                    <div class="setting-group">
-                        <h3>Display Options</h3>
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="show-offline" checked>
-                            Show offline servers
-                        </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="compact-view">
-                            Compact view
-                        </label>
-                    </div>
-                    <button class="btn-primary" onclick="saveSettings()">
-                        <i class="fas fa-save"></i>
-                        Save Settings
-                    </button>
-                </div>
-            </div>
-        </main>
-        <!-- Server Detail Modal -->
-        <div id="server-modal" class="modal">
-            <div class="modal-content large">
-                <div class="modal-header">
-                    <h2 id="modal-server-name">Server Details</h2>
-                    <button class="close-btn" onclick="closeModal()">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="tabs">
-                    <div class="tab active" data-tab="overview">
-                        <i class="fas fa-eye"></i>
-                        Overview
-                    </div>
-                    <div class="tab" data-tab="storage">
-                        <i class="fas fa-hdd"></i>
-                        Storage
-                    </div>
-                    <div class="tab" data-tab="processes">
-                        <i class="fas fa-list"></i>
-                        Processes
-                    </div>
-                    <div class="tab" data-tab="services">
-                        <i class="fas fa-cogs"></i>
-                        Services
-                    </div>
-                    <div class="tab" data-tab="ssh">
-                        <i class="fas fa-terminal"></i>
-                        SSH Sessions
-                    </div>
-                </div>
-                <div id="overview-tab" class="tab-content active"></div>
-                <div id="storage-tab" class="tab-content"></div>
-                <div id="processes-tab" class="tab-content"></div>
-                <div id="services-tab" class="tab-content"></div>
-                <div id="ssh-tab" class="tab-content"></div>
-            </div>
+            <div id="storage-tab" class="tab-content"></div>
+            <div id="processes-tab" class="tab-content"></div>
+            <div id="services-tab" class="tab-content"></div>
+            <div id="ssh-tab" class="tab-content"></div>
         </div>
-        <!-- Loading Overlay -->
-        <div id="loading" class="loading-overlay">
-            <div class="loading-spinner"></div>
-            <p>Loading...</p>
-        </div>
-        <!-- Monitor Script -->
-        <!-- <script src="{{ url_for('static', filename='js/monitor.js') }}"></script> -->
-        <script src="{{ url_prefix }}/static/js/monitor.js"></script>
-        # <script src="{{ url_prefix }}/static/js/enhance.js"></script>
+    </div>
 
-    </body>
+    <div id="loading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <p>Loading...</p>
+    </div>
+
+    <script src="{{ url_prefix }}/static/js/monitor.js?v=5"></script>
+    <script src="{{ url_prefix }}/static/js/enhance.js?v=5"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            document.querySelector(".tabs")?.addEventListener("click", (e) => {
+                const tab = e.target.closest("[data-tab]");
+                if (!tab) return;
+                if (tab.dataset.tab === "history") {
+                    const serverName = document.getElementById("modal-server-name")?.textContent?.trim();
+                    if (serverName && typeof loadHistoryCharts === "function") {
+                        setTimeout(() => loadHistoryCharts(serverName), 60);
+                    }
+                }
+            });
+        });
+    </script>
+
+    <!-- ══════════════════ SELECTOR OVERLAY HTML ══════════════════ -->
+    <div id="mso-overlay" role="dialog" aria-modal="true" aria-label="Select monitoring mode">
+        <div class="mso-wrap">
+
+            <div class="mso-logo" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                    <rect x="2" y="3" width="20" height="14" rx="2" />
+                    <path d="M8 21h8M12 17v4M6 7h4M6 11h12M6 14h4" />
+                </svg>
+            </div>
+
+            <h1 class="mso-title">Infrastructure Monitor</h1>
+            <p class="mso-sub">
+                Select a monitoring dashboard &mdash;
+                auto-opening <strong>Server Monitoring</strong> in <strong id="mso-countdown">10</strong>s
+            </p>
+
+            <!-- progress bar -->
+            <div class="mso-bar-wrap">
+                <div class="mso-bar" id="mso-bar"></div>
+            </div>
+
+            <div class="mso-grid">
+
+                <!-- Server -->
+                <button class="mso-card mso-srv" id="mso-srv" onclick="msoLaunch('server')" type="button">
+                    <div class="mso-tick" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                            <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                    </div>
+                    <div class="mso-ico" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                            stroke-linecap="round">
+                            <rect x="2" y="2" width="20" height="8" rx="2" />
+                            <rect x="2" y="14" width="20" height="8" rx="2" />
+                            <circle cx="6.5" cy="6" r="1.2" fill="currentColor" stroke="none" />
+                            <circle cx="6.5" cy="18" r="1.2" fill="currentColor" stroke="none" />
+                        </svg>
+                    </div>
+                    <div class="mso-card-title">Server Monitoring</div>
+                    <div class="mso-card-desc">CPU, memory, storage, network, SSH sessions, processes &amp; 24h history
+                        charts for all servers.</div>
+                    <div class="mso-chips">
+                        <span class="mso-chip">CPU</span><span class="mso-chip">Memory</span>
+                        <span class="mso-chip">Storage</span><span class="mso-chip">Network</span>
+                        <span class="mso-chip">SSH</span><span class="mso-chip">Alerts</span>
+                    </div>
+                </button>
+
+                <!-- GPU -->
+                <button class="mso-card mso-gpu" id="mso-gpu" onclick="msoLaunch('gpu')" type="button">
+                    <div class="mso-tick" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                            <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                    </div>
+                    <div class="mso-ico" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                            stroke-linecap="round">
+                            <rect x="2" y="7" width="20" height="14" rx="2" />
+                            <path d="M16 3H8M12 3v4M7 13h2M11 13h2M15 13h2M7 17h.5M11 17h2" />
+                        </svg>
+                    </div>
+                    <div class="mso-card-title">GPU Monitoring</div>
+                    <div class="mso-card-desc">VRAM, utilization, temperature, power draw, CUDA processes &amp; cluster
+                        history for all GPUs.</div>
+                    <div class="mso-chips">
+                        <span class="mso-chip">VRAM</span><span class="mso-chip">Util %</span>
+                        <span class="mso-chip">Temp</span><span class="mso-chip">Power</span>
+                        <span class="mso-chip">CUDA</span><span class="mso-chip">Nexus</span>
+                    </div>
+                </button>
+
+                <!-- Storage -->
+                <button class="mso-card mso-sto" id="mso-sto" onclick="msoLaunch('storage')" type="button">
+                    <div class="mso-tick" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                            <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                    </div>
+                    <div class="mso-ico" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                            stroke-linecap="round">
+                            <ellipse cx="12" cy="5" rx="9" ry="3" />
+                            <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+                            <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+                        </svg>
+                    </div>
+                    <div class="mso-card-title">Storage Monitoring</div>
+                    <div class="mso-card-desc">NetApp &amp; Infortrend systems, disk health, volumes, RAID status,
+                        alerts &amp; capacity overview.</div>
+                    <div class="mso-chips">
+                        <span class="mso-chip">NetApp</span><span class="mso-chip">Disks</span>
+                        <span class="mso-chip">Volumes</span><span class="mso-chip">RAID</span>
+                        <span class="mso-chip">Alerts</span><span class="mso-chip">Capacity</span>
+                    </div>
+                </button>
+
+            </div><!-- /.mso-grid -->
+
+            <p class="mso-hint">
+                Click any card to launch instantly &nbsp;&middot;&nbsp;
+                <kbd>&larr;</kbd><kbd>&rarr;</kbd> navigate &nbsp;&middot;&nbsp;
+                <kbd>Enter</kbd> open &nbsp;&middot;&nbsp;
+                <kbd>Esc</kbd> server default
+            </p>
+
+        </div>
+    </div>
+
+    <!-- ══════════════════ SELECTOR LOGIC ══════════════════ -->
+    <script>
+        (function () {
+            'use strict';
+
+            var GPU_URL = 'http://192.168.3.202:8000/';
+            var STO_URL = 'http://192.168.2.137:8080/monitoring_storage/';
+            var AUTO_SEC = 10;
+
+            var overlay = document.getElementById('mso-overlay');
+            var srvCard = document.getElementById('mso-srv');
+            var gpuCard = document.getElementById('mso-gpu');
+            var stoCard = document.getElementById('mso-sto');
+            var barEl = document.getElementById('mso-bar');
+            var cdEl = document.getElementById('mso-countdown');
+            var cards = [srvCard, gpuCard, stoCard];
+            var types = ['server', 'gpu', 'storage'];
+            var focused = -1;   /* -1 = no keyboard focus yet */
+            var done = false;
+            var ticker = null;
+            var remaining = AUTO_SEC;
+
+            /* ── Countdown ── */
+            function startCountdown() {
+                clearInterval(ticker);
+                remaining = AUTO_SEC;
+                updateCD();
+                animateBar(AUTO_SEC);
+                ticker = setInterval(function () {
+                    remaining--;
+                    updateCD();
+                    if (remaining <= 0) {
+                        clearInterval(ticker);
+                        if (!done) msoLaunch('server');
+                    }
+                }, 1000);
+            }
+
+            function updateCD() {
+                if (cdEl) cdEl.textContent = remaining;
+            }
+
+            function animateBar(secs) {
+                if (!barEl) return;
+                barEl.style.transition = 'none';
+                barEl.style.transform = 'scaleX(1)';
+                void barEl.offsetWidth;
+                barEl.style.transition = 'transform ' + secs + 's linear';
+                barEl.style.transform = 'scaleX(0)';
+            }
+
+            function stopCountdown() {
+                clearInterval(ticker);
+                if (barEl) {
+                    var computed = getComputedStyle(barEl).transform;
+                    barEl.style.transition = 'none';
+                    barEl.style.transform = computed;
+                }
+            }
+
+            /* ── Card focus (keyboard highlight) ── */
+            function setFocused(idx) {
+                focused = idx;
+                cards.forEach(function (c, i) {
+                    c.classList.toggle('mso-active', i === idx);
+                });
+            }
+
+            /* ── MAIN: click = instant launch; stops timer ── */
+            window.msoLaunch = function (type) {
+                if (done) return;
+                done = true;
+                stopCountdown();
+
+                var idx = types.indexOf(type);
+                if (idx >= 0) {
+                    cards[idx].classList.add('mso-active');
+                }
+
+                overlay.classList.add('mso-out');
+                setTimeout(function () {
+                    if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+                    document.body.style.overflow = '';
+                    if (type === 'gpu') openFrame(GPU_URL, 'GPU Nexus — Cluster Observatory', 'gpu');
+                    else if (type === 'storage') openFrame(STO_URL, 'Storage Monitoring Dashboard', 'storage');
+                    /* server: nothing to do */
+                }, 320);
+            };
+
+            /* ── Reopen from sidebar ── */
+            window.msoReopen = function () {
+                var existing = document.getElementById('mso-frame-wrap');
+                if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+
+                done = false;
+                focused = -1;
+                remaining = AUTO_SEC;
+                cards.forEach(function (c) { c.classList.remove('mso-active'); });
+
+                var newEl = document.createElement('div');
+                newEl.id = 'mso-overlay';
+                newEl.setAttribute('role', 'dialog');
+                newEl.setAttribute('aria-modal', 'true');
+                newEl.setAttribute('tabindex', '-1');
+                newEl.style.cssText = [
+                    'position:fixed;inset:0;z-index:99999;',
+                    'display:flex;align-items:center;justify-content:center;',
+                    'background:rgba(4,6,14,0.97);',
+                    'backdrop-filter:blur(20px) saturate(1.5);',
+                    '-webkit-backdrop-filter:blur(20px) saturate(1.5);',
+                    'overflow-y:auto;padding:24px 16px;',
+                    'animation:msoIn 0.38s cubic-bezier(0.16,1,0.3,1) both;'
+                ].join('');
+
+                newEl.innerHTML = overlay.innerHTML;
+                document.body.appendChild(newEl);
+                overlay = newEl;
+
+                /* re-bind elements */
+                srvCard = overlay.querySelector('#mso-srv');
+                gpuCard = overlay.querySelector('#mso-gpu');
+                stoCard = overlay.querySelector('#mso-sto');
+                barEl = overlay.querySelector('#mso-bar');
+                cdEl = overlay.querySelector('#mso-countdown');
+                cards = [srvCard, gpuCard, stoCard];
+
+                srvCard.onclick = function () { msoLaunch('server'); };
+                gpuCard.onclick = function () { msoLaunch('gpu'); };
+                stoCard.onclick = function () { msoLaunch('storage'); };
+
+                overlay.focus();
+                startCountdown();
+            };
+
+            /* ── Full-screen iframe ── */
+            function openFrame(url, title, type) {
+                var accentColor = type === 'gpu' ? '#22d3ee' : '#34d399';
+                var iconSvg = type === 'gpu'
+                    ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="color:#22d3ee"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8M12 3v4"/></svg>'
+                    : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="color:#34d399"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>';
+
+                var wrap = document.createElement('div');
+                wrap.id = 'mso-frame-wrap';
+                wrap.style.cssText = 'position:fixed;inset:0;z-index:99998;display:flex;flex-direction:column;background:#07080b;';
+
+                var bar = document.createElement('div');
+                bar.className = 'mso-frame-bar';
+                // bar.innerHTML =
+                //     '<div class="mso-frame-title" style="color:' + accentColor + '">' + iconSvg + title + '</div>' +
+                //     '<button id="mso-back-btn" type="button">&#8592; Back to Server Monitor</button>';
+
+                var frame = document.createElement('iframe');
+                frame.src = url;
+                frame.title = title;
+                frame.setAttribute('allow', 'fullscreen');
+                frame.style.cssText = 'flex:1;border:none;width:100%;height:100%;';
+
+                wrap.appendChild(bar);
+                wrap.appendChild(frame);
+                document.body.appendChild(wrap);
+
+                document.getElementById('mso-back-btn').addEventListener('click', function () {
+                    if (wrap.parentNode) wrap.parentNode.removeChild(wrap);
+                });
+            }
+
+            /* ── Keyboard navigation ── */
+            document.addEventListener('keydown', function (e) {
+                if (!document.getElementById('mso-overlay')) return;
+                if (done) return;
+                if (e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    stopCountdown();
+                    setFocused(focused < 0 ? 0 : (focused + 1) % 3);
+                }
+                if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    stopCountdown();
+                    setFocused(focused < 0 ? 2 : (focused + 2) % 3);
+                }
+                if (e.key === 'Enter' && focused >= 0) {
+                    e.preventDefault();
+                    msoLaunch(types[focused]);
+                }
+                if (e.key === 'Escape') {
+                    msoLaunch('server');
+                }
+            });
+
+            /* ── Init ── */
+            overlay.setAttribute('tabindex', '-1');
+            setTimeout(function () { overlay.focus(); }, 80);
+            startCountdown();
+
+        })();
+    </script>
+
+</body>
+
 </html>

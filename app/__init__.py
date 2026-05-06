@@ -20,20 +20,22 @@
 # from app import routes
 # app.register_blueprint(routes.bp, url_prefix = "/monitoring_server")
 
+# app/__init__.py
+import sys
+import os
+
+# ── Add project root to path so routes.py can find database.py ──
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from flask import Flask
-from .routes import bp
 import threading
+
 
 def create_app():
     app = Flask(__name__)
-    
-    # Register blueprint
+
+    # Import bp INSIDE create_app — after sys.path is set
+    from .routes import bp
     app.register_blueprint(bp, url_prefix='/monitoring_server')
-    
-    # ✅ START BACKGROUND THREAD FOR SSH TRACKING
-    from .routes import collect_server_data
-    tracking_thread = threading.Thread(target=collect_server_data, daemon=True)
-    tracking_thread.start()
-    print("✅ SSH tracking background thread started!")
-    
+
     return app
